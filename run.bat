@@ -9,11 +9,11 @@ if "%PY%"=="" (
     exit
 )
 
-:: Clear port 8008
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8008') do taskkill /f /pid %%a >nul 2>&1
+:: Clear port 8000
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000') do taskkill /f /pid %%a >nul 2>&1
 
 :: Start and Open
-start /b %PY% -m http.server 8008
+start /b %PY% -m http.server 8000
 timeout /t 1 /nobreak >nul
-start chrome "http://localhost:8008"
+start chrome "http://localhost:8000"
 exit
