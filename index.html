@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titan 15 Control</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="icon" href="data:,">
+    <script src="https://unpkg.com/lucide@0.400.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/midi-player-js@2.0.16/browser/midiplayer.min.js"></script>
+    <style>
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #0a0b10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loader">
+        <h1>LOADING TITAN...</h1>
+    </div>
+    <div class="glass-container">
+        <header>
+            <div class="logo">
+                <i data-lucide="zap"></i>
+                <h1>TITAN<span>15</span></h1>
+            </div>
+            <div class="header-actions">
+                <button id="connectBtn" class="btn-primary">
+                    <i data-lucide="plug"></i> Connect Arduino
+                </button>
+                <div id="connectionStatus" class="status-indicator">OFFLINE</div>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="main-controls" style="display: flex; flex-direction: column;">
+                <div class="panel motors-panel" style="flex: 1;">
+                    <div class="panel-header">
+                        <h2><i data-lucide="layout-grid"></i> Motor Matrix</h2>
+                        <div class="btn-group-midi">
+                            <button id="stopAllBtn" class="btn-danger">ALL STOP</button>
+                            <span id="status-STOP" class="midi-status-label"></span>
+                        </div>
+                    </div>
+                    <div id="motorGrid" class="motor-grid"></div>
+                </div>
+            </div>
+
+            <div class="side-controls">
+                <div class="panel recorder-panel">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="rec-controls">CONTROLS</button>
+                        <button class="tab-btn" data-tab="rec-file">FILE</button>
+                    </div>
+
+                    <div id="rec-controls" class="tab-content active" style="position: relative;">
+                        <button id="toggleRecMidiMap" class="btn-tiny" title="Map MIDI"
+                            style="position: absolute; top: -5px; right: -5px;">
+                            <i data-lucide="settings-2"></i>
+                        </button>
+                        <div class="timer" id="recordTimer">00:00:00.000</div>
+                        <div class="setting" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <label>Playback Speed: <span id="playSpeedVal">1.0</span>x</label>
+                                <span id="status-SPEED" class="midi-status-label"></span>
+                            </div>
+                            <input type="range" id="playbackSpeed" min="0.1" max="5.0" step="0.1" value="1.0">
+                        </div>
+                        <div class="recorder-btns">
+                            <div class="btn-group-midi">
+                                <button id="recordBtn" class="btn-record"><i data-lucide="circle"></i> REC</button>
+                                <span id="status-REC" class="midi-status-label"></span>
+                            </div>
+                            <div class="btn-group-midi">
+                                <button id="pauseBtn" class="btn-outline" disabled><i data-lucide="pause"></i>
+                                    PAUSE</button>
+                                <span id="status-PAUSE" class="midi-status-label"></span>
+                            </div>
+                            <div class="btn-group-midi">
+                                <button id="playBtn" class="btn-play" disabled><i data-lucide="play"></i> PLAY</button>
+                                <span id="status-PLAY" class="midi-status-label"></span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div class="timeline-container">
+                                <span id="timelineCurrent">00:00</span>
+                                <input type="range" id="timelineScrubber" min="0" max="100" value="0"
+                                    class="timeline-slider">
+                                <span id="timelineTotal">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rec-file" class="tab-content">
+                        <div class="import-export">
+                            <input type="file" id="importFile" accept=".json,.csv,.mid,.midi" hidden>
+                            <button class="btn-outline w-100" onclick="document.getElementById('importFile').click()">
+                                <i data-lucide="file-input"></i> IMPORT RECORDING
+                            </button>
+                            <div class="export-box" style="margin-top: 10px; display: flex; gap: 5px;">
+                                <select id="exportFormat" style="flex: 1;">
+                                    <option value="json">JSON</option>
+                                    <option value="csv">CSV</option>
+                                    <option value="mid">MIDI</option>
+                                </select>
+                                <button id="exportBtn" class="btn-primary" style="flex: 1;">
+                                    <i data-lucide="file-output"></i> EXPORT
+                                </button>
+                            </div>
+                            <div
+                                style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="font-size: 10px; opacity: 0.8;">AUTO SAVE</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="autoSaveToggle">
+                                        <span class="slider-toggle"></span>
+                                    </label>
+                                </div>
+                                <input type="text" id="recordName" placeholder="SESSION NAME" class="session-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel patterns-panel">
+                    <div class="panel-header">
+                        <h2><i data-lucide="wand-2"></i> Patterns</h2>
+                    </div>
+                    <div class="pattern-grid">
+                        <button class="pattern-btn" data-pattern="chaos">CHAOS</button>
+                        <button class="pattern-btn" data-pattern="wave">WAVE</button>
+                        <button class="pattern-btn" data-pattern="pulse">PULSE</button>
+                        <button class="pattern-btn" data-pattern="ramp">RAMP</button>
+                    </div>
+                    <div id="patternSettings" class="pattern-settings">
+                        <div class="setting p-all">
+                            <label>Tempo</label>
+                            <input type="range" id="p_speed" min="1" max="100" value="50">
+                        </div>
+                        <div class="setting p-all">
+                            <label>Power</label>
+                            <input type="range" id="p_power" min="0" max="4095" value="4095">
+                        </div>
+                        <div class="setting p-wave">
+                            <label>Spread</label>
+                            <input type="range" id="p_spread" min="0" max="100" value="50">
+                        </div>
+                        <div class="setting p-chaos">
+                            <label>Chaos</label>
+                            <input type="range" id="p_chaos" min="0" max="100" value="20">
+                        </div>
+                        <div class="setting p-chaos">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label>Lerp Chaos</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="p_chaos_lerp">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting p-chaos" id="chaos_lerp_speed_container" style="display: none;">
+                            <label>Lerp Speed: <span id="chaos_lerp_val">50</span></label>
+                            <input type="range" id="p_chaos_lerp_speed" min="1" max="100" value="50">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel midi-panel">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="midi-hw">HARDWARE</button>
+                        <button class="tab-btn" data-tab="midi-file">FILE</button>
+                    </div>
+
+                    <div id="midi-hw" class="tab-content active">
+                        <div class="hw-midi">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label style="margin:0;">Hardware Port:</label>
+                                <button onclick="initMIDI()" class="btn-primary"
+                                    style="padding: 2px 8px; font-size: 9px; height: 24px;">SCAN MIDI</button>
+                            </div>
+                            <select id="midiInputSelect" style="width: 100%;">
+                                <option value="">None Found</option>
+                            </select>
+                            <div class="piano-mode-container"
+                                style="flex-direction: column; align-items: stretch; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>PIANO MODE</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="pianoModeToggle">
+                                        <span class="slider-toggle"></span>
+                                    </label>
+                                </div>
+                                <div class="piano-hover-panel"
+                                    style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <span>PIANO HOVER</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="pianoHoverToggle">
+                                            <span class="slider-toggle"></span>
+                                        </label>
+                                    </div>
+                                    <div id="pianoHoverSettings"
+                                        style="display: none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                                        <button id="mapPianoHoverMidiBtn" class="btn-outline w-100" style="font-size: 8px; margin-bottom: 10px;">
+                                            MAP PIANO HOVER MIDI: <span id="pianoHoverMidiStatus">NONE</span>
+                                        </button>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <span style="font-size: 8px; opacity: 0.8;">RESET ON EXIT</span>
+                                            <label class="switch">
+                                                <input type="checkbox" id="pianoHoverResetToggle">
+                                                <span class="slider-toggle"></span>
+                                            </label>
+                                        </div>
+                                        <div id="pianoHoverLerpGroup" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; margin-top: 5px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                <span style="font-size: 8px; opacity: 0.8;">LERP RESET</span>
+                                                <label class="switch">
+                                                    <input type="checkbox" id="pianoHoverLerpResetToggle">
+                                                    <span class="slider-toggle"></span>
+                                                </label>
+                                            </div>
+                                            <div id="pianoHoverLerpSpeedContainer" style="display: none; margin-bottom: 10px;">
+                                                <label style="font-size: 8px; opacity: 0.8;">LERP SPEED: <span id="pianoHoverLerpVal">50</span></label>
+                                                <input type="range" id="pianoHoverLerpSpeed" min="1" max="100" value="50">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="pianoLerpSettings"
+                                    style="display: none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 5px;">
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <span style="font-size: 8px; opacity: 0.8;">SMOOTH LERP</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="pianoLerpToggle">
+                                            <span class="slider-toggle"></span>
+                                        </label>
+                                    </div>
+                                    <div id="lerpSpeedContainer" style="display: none;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; font-size: 8px; margin-bottom: 4px;">
+                                            <span>LERP SPEED</span>
+                                            <span id="lerpSpeedVal">50</span>
+                                        </div>
+                                        <input type="range" id="pianoLerpSpeed" min="1" max="100" value="50"
+                                            style="width: 100%; height: 4px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="piano-mode-container">
+                                <span>AUTO MAP CC</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="autoMapCCToggle">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </div>
+
+                            <div class="hover-mode-panel">
+                                <div class="piano-mode-container"
+                                    style="margin-top:0; border-bottom-left-radius:0; border-bottom-right-radius:0;">
+                                    <span>MOUSE HOVER MODE</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="hoverModeToggle">
+                                        <span class="slider-toggle"></span>
+                                    </label>
+                                </div>
+                                <div id="hoverSettingsDiv" class="hover-settings" style="display: none;">
+                                    <button id="mapHoverMidiBtn" class="btn-outline w-100" style="font-size: 8px;">
+                                        MAP HOVER MIDI: <span id="hoverMidiStatus">NONE</span>
+                                    </button>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                                        <span style="font-size: 9px; opacity: 0.8;">RESET ON EXIT</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="hoverResetToggle" checked>
+                                            <span class="slider-toggle"></span>
+                                        </label>
+                                    </div>
+                                    <div id="hoverLerpGroup" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; margin-top: 5px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                                            <span style="font-size: 9px; opacity: 0.8;">LERP RESET</span>
+                                            <label class="switch">
+                                                <input type="checkbox" id="hoverLerpResetToggle">
+                                                <span class="slider-toggle"></span>
+                                            </label>
+                                        </div>
+                                        <div id="hoverLerpSpeedContainer" style="display: none; margin-top: 5px;">
+                                            <label style="font-size: 8px; opacity: 0.8;">LERP SPEED: <span id="hoverLerpVal">50</span></label>
+                                            <input type="range" id="hoverLerpSpeed" min="1" max="100" value="50">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="midi-file" class="tab-content">
+                        <input type="file" id="midiFile" accept=".mid,.midi" hidden>
+                        <button class="btn-outline w-100" onclick="document.getElementById('midiFile').click()">
+                            <i data-lucide="file-music"></i> LOAD MIDI FILE
+                        </button>
+                        <div id="midiInfo" class="midi-info">No MIDI active</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>
