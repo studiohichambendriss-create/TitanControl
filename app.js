@@ -1419,7 +1419,6 @@ document.getElementById('pianoHoverLerpSpeed').oninput = (e) => {
 
 // Sequencer UI
 // Sequencer UI
-let draggedNode = null;
 
 function renderSequencer() {
     const track = document.getElementById('sequencerTracks');
