@@ -36,7 +36,9 @@ const clearSeqBtn = document.getElementById('clearSeqBtn');
 if (clearSeqBtn) {
     clearSeqBtn.onclick = () => {
         if (!isSaved && recording.length > 0) {
-            if (!confirm("RECORDING NOT SAVED! Are you sure you want to clear it?")) return;
+            if (confirm("Do you want to SAVE this recording before removing? (Click OK to save, Cancel to discard)")) {
+                document.getElementById('exportBtn').click();
+            }
         }
         if (isRecording) startStopRecording();
         recording = [];
@@ -120,6 +122,17 @@ function applyStateAtTime(t) {
             else if (m === 18) { document.getElementById('p_spread').value = v / 40.95; }
             else if (m === 19) { document.getElementById('p_chaos').value = v / 40.95; }
             else if (m === 20) { document.getElementById('p_chaos_lerp_speed').value = v / 40.95; }
+            
+            // Trigger input events so any UI listeners (like number values next to sliders) update
+            if (m >= 16 && m <= 20) {
+                let id = '';
+                if (m === 16) id = 'p_speed';
+                if (m === 17) id = 'p_power';
+                if (m === 18) id = 'p_spread';
+                if (m === 19) id = 'p_chaos';
+                if (m === 20) id = 'p_chaos_lerp_speed';
+                if (id) document.getElementById(id).dispatchEvent(new Event('input'));
+            }
         }
     });
 }
@@ -515,21 +528,17 @@ function startStopRecording() {
         virtualTime = 0;
         
         // Record baseline
-        for (let i = 0; i < 15; i++) isSaved = false;
-        recording.push({ t: 0, m: i, v: motors[i] });
-        const s = getPSettings();
+        for (let i = 0; i < 15; i++) {
+            recording.push({ t: 0, m: i, v: motors[i] });
+        }
         isSaved = false;
+        
         recording.push({ t: 0, m: 15, v: getActivePatternVal() });
-        isSaved = false;
-        recording.push({ t: 0, m: 16, v: s.speed * 40.95 });
-        isSaved = false;
-        recording.push({ t: 0, m: 17, v: s.power });
-        isSaved = false;
-        recording.push({ t: 0, m: 18, v: s.spread * 40.95 });
-        isSaved = false;
-        recording.push({ t: 0, m: 19, v: s.chaos * 40.95 });
-        isSaved = false;
-        recording.push({ t: 0, m: 20, v: s.lerpSpeed * 40.95 });
+        recording.push({ t: 0, m: 16, v: parseInt(document.getElementById('p_speed').value) * 40.95 });
+        recording.push({ t: 0, m: 17, v: parseInt(document.getElementById('p_power').value) });
+        recording.push({ t: 0, m: 18, v: parseInt(document.getElementById('p_spread').value) * 40.95 });
+        recording.push({ t: 0, m: 19, v: parseInt(document.getElementById('p_chaos').value) * 40.95 });
+        recording.push({ t: 0, m: 20, v: parseInt(document.getElementById('p_chaos_lerp_speed').value) * 40.95 });
         
         recordBtn.innerHTML = '<i data-lucide="square"></i> STOP REC';
         recordBtn.classList.add('active');
