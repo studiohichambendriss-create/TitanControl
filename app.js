@@ -28,7 +28,8 @@ const connectBtn = document.getElementById('connectBtn');
 const statusIndicator = document.getElementById('connectionStatus');
 const recordBtn = document.getElementById('recordBtn');
 const stopPlaybackBtn = document.getElementById('stopPlaybackBtn');
-const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopPlaybackBtn');
+const clearBtn = document.getElementById('clearSeqBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const recordTimer = document.getElementById('recordTimer');
 
@@ -702,6 +703,14 @@ function stopPlayback() {
 }
 
 playBtn.onclick = startStopPlayback;
+if (stopBtn) stopBtn.onclick = stopPlayback;
+if (clearBtn) clearBtn.onclick = () => {
+    if (confirm("Clear recording?")) {
+        recording = [];
+        updateTimelineTotal();
+        renderSequencer();
+    }
+};
 
 function updateTimelineTotal() {
     if (recording.length === 0) return;
