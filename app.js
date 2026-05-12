@@ -488,7 +488,15 @@ async function setMotor(id, val, skipRecord = false) {
 }
 
 // Emergency Stop
-function stopAll() {
+function stopAll(skipRecord = false) {
+    if (isRecording && !isPaused && !skipRecord) {
+        isSaved = false;
+        recording.push({
+            t: performance.now() - startTime - totalPausedTime,
+            m: 21,
+            v: 1
+        });
+    }
     stopPattern();
     isRecording = false;
     isPlaying = false;
@@ -913,6 +921,10 @@ exportBtn.onclick = () => {
 
 // Patterns Logic
 function stopPattern() {
+    if (isRecording && !isPaused) {
+        isSaved = false;
+        recording.push({ t: performance.now() - startTime - totalPausedTime, m: 15, v: 0 });
+    }
     clearInterval(patternInterval);
     document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('patternSettings').classList.remove('active');
