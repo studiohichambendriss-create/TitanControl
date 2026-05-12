@@ -26,9 +26,19 @@ A professional-grade, high-fidelity motor control system designed for precision 
 
 ## 🚀 Quick Start
 1.  **Flash Hardware**: Upload `TitanControl.ino` to your Arduino Mega.
-2.  **Launch Server**: Run `run_titan.bat` to start the local environment.
+2.  **Launch Server**: 
+    - **Windows**: Run `run.bat`.
+    - **Mac**: Run `Run_mac.command`.
+    - **Raspberry Pi**: Run `bash raspi_run.sh`.
 3.  **Connect**: Open the dashboard in Chrome/Edge and click **CONNECT ARDUINO**.
 4.  **Calibrate**: Set your MIDI Hardware Port in the Hardware tab and begin mapping.
+
+## 🍓 Raspberry Pi Setup
+If you are running on a Raspberry Pi:
+1.  Open terminal in project folder.
+2.  Run `bash raspi_setup.sh`.
+3.  **REBOOT** your Pi (needed for Serial permissions).
+4.  Run `bash raspi_run.sh` to start the system.
 
 ## 🛠 Hardware Architecture
 - **Controller**: Arduino Mega 2560
