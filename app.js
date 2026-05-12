@@ -499,6 +499,7 @@ function stopAll() {
     sendCommand('STOP');
     
     recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
+    recordBtn.style.minWidth = '';
     recordBtn.classList.remove('active');
     pauseBtn.disabled = true;
     pauseBtn.innerHTML = '<i data-lucide="pause"></i> PAUSE';
@@ -549,7 +550,8 @@ function startStopRecording() {
         recording.push({ t: 0, m: 19, v: parseInt(document.getElementById('p_chaos').value) * 40.95 });
         recording.push({ t: 0, m: 20, v: parseInt(document.getElementById('p_chaos_lerp_speed').value) * 40.95 });
         
-        recordBtn.innerHTML = '<i data-lucide="square"></i> STOP REC'; recordBtn.style.minWidth = '120px';
+        recordBtn.innerHTML = '<i data-lucide="square"></i> FINISH RECORDING';
+        recordBtn.style.minWidth = '180px';
         recordBtn.classList.add('active');
         recordBtn.style.color = '#ff3e3e';
         recordBtn.style.borderColor = '#ff3e3e';
@@ -562,6 +564,7 @@ function startStopRecording() {
     } else {
         isRecording = false;
         recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
+        recordBtn.style.minWidth = '';
         recordBtn.classList.remove('active');
         recordBtn.style.color = '';
         recordBtn.style.borderColor = '';
@@ -592,6 +595,7 @@ function stopPlayback() {
     
     // Remove active styles from record
     recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
+    recordBtn.style.minWidth = '';
     recordBtn.classList.remove('active');
     recordBtn.style.color = '';
     recordBtn.style.borderColor = '';
