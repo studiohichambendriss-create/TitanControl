@@ -451,6 +451,37 @@ connectBridgeBtn.onclick = () => {
         connectBridgeBtn.innerText = "RETRY PI";
     });
 
+    
+    socket.on('sync_data', (data) => {
+        if (data && data.sequence && data.sequence.length > 0) {
+            console.log("📥 Received active sequence from Pi!");
+            recording = data.sequence;
+            
+            // Render UI
+            playBtn.disabled = false;
+            updateTimelineTotal();
+            document.querySelector('.timeline-container').classList.add('visible');
+            renderSequencer();
+            
+            // Sync time
+            virtualTime = data.current_time || 0;
+            document.getElementById('timelineScrubber').value = virtualTime;
+            document.getElementById('timelineCurrent').innerText = formatTimeShort(virtualTime);
+            
+            // Start playback to sync with where Pi was
+            if (!isPlaying && !isRecording) {
+                isPlaying = true;
+                playBtn.innerHTML = '<i data-lucide="pause"></i> PAUSE';
+                lucide.createIcons();
+                lastRealTime = performance.now();
+                playbackIndex = recording.findIndex(evt => evt.t >= virtualTime);
+                if (playbackIndex === -1) playbackIndex = recording.length;
+                applyStateAtTime(virtualTime);
+                runPlayback();
+            }
+        }
+    });
+
     socket.on('status', (data) => {
         if (data.serial === 'ONLINE') {
             statusIndicator.innerText = 'BRIDGE: ARDUINO OK';
@@ -1722,3 +1753,21 @@ function renderSequencer() {
         window.removeEventListener('mouseup', upHandler);
     };
 }
+
+
+const uploadPiBtn = document.getElementById('uploadPiBtn');
+if (uploadPiBtn) {
+    uploadPiBtn.onclick = () => {
+        if (!socket || !socket.connected) {
+            alert("Not connected to Pi Bridge! Connect first.");
+            return;
+        }
+        if (!recording || recording.length === 0) {
+            alert("No sequence to upload! Record something first.");
+            return;
+        }
+        socket.emit('upload_sequence', recording);
+        alert("Sequence uploaded to Pi! It will loop autonomously when you disconnect.");
+    };
+}
+
