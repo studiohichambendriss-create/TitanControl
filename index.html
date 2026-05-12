@@ -57,7 +57,8 @@
             </div>
         </header>
 
-        <div class="dashboard">
+        <div class="main-layout" style="display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 15px;">
+            <div class="dashboard" style="flex: 1; margin-bottom: 0;">
             <div class="main-controls" style="display: flex; flex-direction: column;">
                 <div class="panel motors-panel" style="flex: 1;">
                     <div class="panel-header">
@@ -83,36 +84,12 @@
                             style="position: absolute; top: -5px; right: -5px;">
                             <i data-lucide="settings-2"></i>
                         </button>
-                        <div class="timer" id="recordTimer">00:00:00.000</div>
                         <div class="setting" style="margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between;">
                                 <label>Playback Speed: <span id="playSpeedVal">1.0</span>x</label>
                                 <span id="status-SPEED" class="midi-status-label"></span>
                             </div>
                             <input type="range" id="playbackSpeed" min="0.1" max="5.0" step="0.1" value="1.0">
-                        </div>
-                        <div class="recorder-btns">
-                            <div class="btn-group-midi">
-                                <button id="recordBtn" class="btn-record"><i data-lucide="circle"></i> REC</button>
-                                <span id="status-REC" class="midi-status-label"></span>
-                            </div>
-                            <div class="btn-group-midi">
-                                <button id="pauseBtn" class="btn-outline" disabled><i data-lucide="pause"></i>
-                                    PAUSE</button>
-                                <span id="status-PAUSE" class="midi-status-label"></span>
-                            </div>
-                            <div class="btn-group-midi">
-                                <button id="playBtn" class="btn-play" disabled><i data-lucide="play"></i> PLAY</button>
-                                <span id="status-PLAY" class="midi-status-label"></span>
-                            </div>
-                        </div>
-                        <div style="margin-top: 15px;">
-                            <div class="timeline-container">
-                                <span id="timelineCurrent">00:00</span>
-                                <input type="range" id="timelineScrubber" min="0" max="100" value="0"
-                                    class="timeline-slider">
-                                <span id="timelineTotal">00:00</span>
-                            </div>
                         </div>
                     </div>
 
@@ -331,7 +308,39 @@
                     </div>
                 </div>
             </div>
+                </div>
+            </div>
         </div>
+
+        <div class="panel sequencer-panel" style="height: 250px; display: flex; flex-direction: column;">
+            <div class="panel-header" style="margin-bottom: 10px;">
+                <h2><i data-lucide="list-video"></i> Sequencer</h2>
+                <div class="timer" id="recordTimer" style="margin: 0; font-size: 16px;">00:00:00.000</div>
+                <div class="recorder-btns" style="display: flex; gap: 10px;">
+                    <div class="btn-group-midi">
+                        <button id="recordBtn" class="btn-record"><i data-lucide="circle"></i> REC</button>
+                        <span id="status-REC" class="midi-status-label"></span>
+                    </div>
+                    <div class="btn-group-midi">
+                        <button id="pauseBtn" class="btn-outline" disabled><i data-lucide="pause"></i> PAUSE</button>
+                        <span id="status-PAUSE" class="midi-status-label"></span>
+                    </div>
+                    <div class="btn-group-midi">
+                        <button id="playBtn" class="btn-play" disabled><i data-lucide="play"></i> PLAY</button>
+                        <span id="status-PLAY" class="midi-status-label"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="timeline-container" style="margin-bottom: 10px; padding: 5px 12px;">
+                <span id="timelineCurrent">00:00</span>
+                <input type="range" id="timelineScrubber" min="0" max="100" value="0" class="timeline-slider">
+                <span id="timelineTotal">00:00</span>
+            </div>
+            <div id="sequencerTracks" class="sequencer-tracks" style="flex: 1; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto; overflow-y: hidden; display: flex; gap: 2px; padding: 10px; align-items: flex-end; position: relative;">
+                <!-- Recorded events will be drawn here -->
+            </div>
+        </div>
+    </div>
     </div>
     <script src="app.js"></script>
     <script>lucide.createIcons();</script>

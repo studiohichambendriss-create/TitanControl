@@ -369,11 +369,10 @@ function startStopRecording() {
         recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
         recordBtn.classList.remove('active');
         pauseBtn.disabled = true;
-        playBtn.style.display = 'flex';
-        playBtn.disabled = recording.length === 0;
         lucide.createIcons();
         updateTimelineTotal();
         document.querySelector('.timeline-container').classList.add('visible');
+        renderSequencer();
 
         // Auto Save
         if (document.getElementById('autoSaveToggle').checked && recording.length > 15) {
@@ -530,6 +529,7 @@ document.getElementById('importFile').onchange = (e) => {
             playBtn.disabled = false;
             updateTimelineTotal();
             document.querySelector('.timeline-container').classList.add('visible');
+            renderSequencer();
             alert('JSON Loaded');
         };
         reader.readAsText(file);
@@ -543,6 +543,7 @@ document.getElementById('importFile').onchange = (e) => {
             playBtn.disabled = false;
             updateTimelineTotal();
             document.querySelector('.timeline-container').classList.add('visible');
+            renderSequencer();
             alert('CSV Loaded');
         };
         reader.readAsText(file);
@@ -561,6 +562,9 @@ document.getElementById('importFile').onchange = (e) => {
             player.loadArrayBuffer(ev.target.result);
             // We don't play it yet, just store it as a recording
             playBtn.disabled = false;
+            updateTimelineTotal();
+            document.querySelector('.timeline-container').classList.add('visible');
+            renderSequencer();
             alert('MIDI Imported as Sequence');
         };
         reader.readAsArrayBuffer(file);
@@ -661,7 +665,7 @@ document.querySelectorAll('.pattern-btn').forEach(btn => {
                     if (s.lerp) {
                         targetMotors[id] = val;
                     } else {
-                        setMotor(id, val);
+                        setMotor(id, val, true);
                     }
                 }
             }, 100 / getPSettings().speed);
@@ -671,7 +675,7 @@ document.querySelectorAll('.pattern-btn').forEach(btn => {
                 const s = getPSettings();
                 for (let i = 0; i < 15; i++) {
                     const val = Math.floor((Math.sin(t + i * s.spread) + 1) * (s.power / 2));
-                    setMotor(i, val);
+                    setMotor(i, val, true);
                 }
                 t += 0.1 * s.speed;
             }, 30);
@@ -680,7 +684,7 @@ document.querySelectorAll('.pattern-btn').forEach(btn => {
             patternInterval = setInterval(() => {
                 const s = getPSettings();
                 const val = Math.floor((Math.sin(t) + 1) * (s.power / 2));
-                for (let i = 0; i < 15; i++) setMotor(i, val);
+                for (let i = 0; i < 15; i++) setMotor(i, val, true);
                 t += 0.1 * s.speed;
             }, 30);
         } else if (pattern === 'ramp') {
@@ -688,7 +692,7 @@ document.querySelectorAll('.pattern-btn').forEach(btn => {
             patternInterval = setInterval(() => {
                 const s = getPSettings();
                 v = (v + (50 * s.speed)) % s.power;
-                for (let i = 0; i < 15; i++) setMotor(i, Math.floor(v));
+                for (let i = 0; i < 15; i++) setMotor(i, Math.floor(v), true);
             }, 20);
         }
     };
@@ -1120,3 +1124,25 @@ document.getElementById('pianoHoverLerpSpeed').oninput = (e) => {
 
 // Final cleanup: No more alerts on mapping, just visual glow.
 // (Logic already in place via selectedMotorId)
+
+// Sequencer UI
+function renderSequencer() {
+    const track = document.getElementById('sequencerTracks');
+    if (!track) return;
+    track.innerHTML = '';
+    
+    recording.forEach((evt) => {
+        const step = document.createElement('div');
+        step.className = 'seq-step';
+        step.innerHTML = `
+            <span>M${evt.m + 1}</span>
+            <input type="range" class="seq-fader" value="${evt.v}" min="0" max="4095">
+        `;
+        const fader = step.querySelector('.seq-fader');
+        fader.oninput = (e) => {
+            evt.v = parseInt(e.target.value);
+            if (!isPlaying && !isRecording) setMotor(evt.m, evt.v, true);
+        };
+        track.appendChild(step);
+    });
+}
