@@ -26,22 +26,106 @@ const motorGrid = document.getElementById('motorGrid');
 const connectBtn = document.getElementById('connectBtn');
 const statusIndicator = document.getElementById('connectionStatus');
 const recordBtn = document.getElementById('recordBtn');
-const pauseBtn = document.getElementById('pauseBtn');
+const stopPlaybackBtn = document.getElementById('stopPlaybackBtn');
 const playBtn = document.getElementById('playBtn');
 const recordTimer = document.getElementById('recordTimer');
 
-const newSeqBtn = document.getElementById('newSeqBtn');
-if (newSeqBtn) {
-    newSeqBtn.onclick = () => {
+let isSaved = true;
+
+const clearSeqBtn = document.getElementById('clearSeqBtn');
+if (clearSeqBtn) {
+    clearSeqBtn.onclick = () => {
+        if (!isSaved && recording.length > 0) {
+            if (!confirm("RECORDING NOT SAVED! Are you sure you want to clear it?")) return;
+        }
         if (isRecording) startStopRecording();
         recording = [];
         renderSequencer();
         document.getElementById('timelineScrubber').value = 0;
+        document.getElementById('timelineScrubber').max = 0;
         document.getElementById('timelineCurrent').innerText = "00:00";
         document.getElementById('timelineTotal').innerText = "00:00";
         playBtn.disabled = true;
+        stopPlaybackBtn.disabled = true;
+        virtualTime = 0;
+        playbackIndex = 0;
+        isSaved = true;
+        
+        // Remove svg playhead
+        const playhead = document.getElementById('svg-playhead');
+        if (playhead) playhead.remove();
     };
 }
+
+const timelineScrubber = document.getElementById('timelineScrubber');
+timelineScrubber.oninput = (e) => {
+    if (isRecording || recording.length === 0) return;
+    
+    // Stop playback if playing
+    if (isPlaying) {
+        isPlaying = false;
+        playBtn.innerHTML = '<i data-lucide="play"></i> PLAY';
+        lucide.createIcons();
+    }
+    
+    virtualTime = parseFloat(e.target.value);
+    document.getElementById('timelineCurrent').innerText = formatTimeShort(virtualTime);
+    
+    // Update SVG playhead
+    const svgPlayhead = document.getElementById('svg-playhead');
+    if (svgPlayhead) {
+        const svg = svgPlayhead.parentElement;
+        if (svg) {
+            const maxT = recording[recording.length - 1].t || 1000;
+            const x = (virtualTime / maxT) * svg.clientWidth;
+            svgPlayhead.setAttribute('x1', x);
+            svgPlayhead.setAttribute('x2', x);
+        }
+    }
+    
+    // Fast-forward to state
+    applyStateAtTime(virtualTime);
+};
+
+function applyStateAtTime(t) {
+    // Find latest state for each parameter before or at time t
+    let state = {};
+    for (let i = 0; i < recording.length; i++) {
+        if (recording[i].t > t) break;
+        state[recording[i].m] = recording[i].v;
+        playbackIndex = i + 1; // Update playback index for resume
+    }
+    
+    // Apply state
+    Object.keys(state).forEach(mStr => {
+        const m = parseInt(mStr);
+        const v = state[m];
+        if (m < 15) {
+            setMotor(m, v, true);
+        } else {
+            if (m === 15) {
+                let patName = '';
+                if (v === 1000) patName = 'chaos';
+                else if (v === 2000) patName = 'wave';
+                else if (v === 3000) patName = 'pulse';
+                else if (v === 4000) patName = 'ramp';
+                if (patName) {
+                    const btn = document.querySelector(`.pattern-btn[data-pattern="${patName}"]`);
+                    if (btn && !btn.classList.contains('active')) btn.click();
+                } else {
+                    stopPattern();
+                }
+            } else if (m === 16) { document.getElementById('p_speed').value = v / 40.95; }
+            else if (m === 17) { document.getElementById('p_power').value = v; }
+            else if (m === 18) { document.getElementById('p_spread').value = v / 40.95; }
+            else if (m === 19) { document.getElementById('p_chaos').value = v / 40.95; }
+            else if (m === 20) { document.getElementById('p_chaos_lerp_speed').value = v / 40.95; }
+        }
+    });
+}
+
+
+
 
 const exportBtn = document.getElementById('exportBtn');
 
@@ -307,15 +391,62 @@ async function sendCommand(cmd) {
     if (writer) {
         const encoder = new TextEncoder();
         await writer.write(encoder.encode(cmd + '\n'));
-    }
-    if (socket && socket.connected) {
+    } else if (socket && socket.connected) {
         socket.emit('command', cmd);
     }
 }
 
-// Auto-init Bridge if on network
-if (typeof io !== 'undefined' && !socket) {
-    // Only if not already connected via button
+// Bridge Connection Logic
+const connectBridgeBtn = document.getElementById('connectBridgeBtn');
+const piIpSelect = document.getElementById('piIp');
+
+connectBridgeBtn.onclick = () => {
+    let ip = piIpSelect.value;
+    if (!ip) {
+        ip = prompt("Enter Pi IP address (e.g. 192.168.4.1):");
+        if (!ip) return;
+    }
+    
+    if (socket) socket.disconnect();
+    
+    const url = ip.includes(':') ? `http://${ip}` : `http://${ip}:5000`;
+    console.log("Connecting to bridge at:", url);
+    
+    socket = io(url);
+    
+    socket.on('connect', () => {
+        console.log("✅ Connected to Titan Bridge at", url);
+        statusIndicator.innerText = 'BRIDGE: ONLINE';
+        statusIndicator.classList.add('online');
+        connectBridgeBtn.innerText = "CONNECTED";
+        connectBridgeBtn.style.background = "var(--primary)";
+    });
+
+    socket.on('connect_error', (err) => {
+        console.error("❌ Bridge Connection Error:", err);
+        statusIndicator.innerText = 'BRIDGE: ERROR';
+        statusIndicator.classList.remove('online');
+        connectBridgeBtn.innerText = "RETRY PI";
+    });
+
+    socket.on('status', (data) => {
+        if (data.serial === 'ONLINE') {
+            statusIndicator.innerText = 'BRIDGE: ARDUINO OK';
+            statusIndicator.classList.add('online');
+        } else {
+            statusIndicator.innerText = 'BRIDGE: NO ARDUINO';
+            statusIndicator.classList.remove('online');
+        }
+    });
+};
+
+// Auto-try localhost bridge if available
+if (typeof io !== 'undefined') {
+    socket = io({ reconnectionAttempts: 3 });
+    socket.on('connect', () => {
+        statusIndicator.innerText = 'LOCAL BRIDGE';
+        statusIndicator.classList.add('online');
+    });
 }
 
 async function setMotor(id, val, skipRecord = false) {
@@ -325,6 +456,7 @@ async function setMotor(id, val, skipRecord = false) {
     await sendCommand(`M${id}:${val}`);
 
     if (isRecording && !isPaused && !skipRecord) {
+        isSaved = false;
         recording.push({
             t: performance.now() - startTime - totalPausedTime,
             m: id,
@@ -357,37 +489,108 @@ function stopAll() {
 document.getElementById('stopAllBtn').onclick = stopAll;
 
 // Recording Logic
+function getActivePatternVal() {
+    const activeBtn = document.querySelector('.pattern-btn.active');
+    if (!activeBtn) return 0;
+    const pat = activeBtn.dataset.pattern;
+    if (pat === 'chaos') return 1000;
+    if (pat === 'wave') return 2000;
+    if (pat === 'pulse') return 3000;
+    if (pat === 'ramp') return 4000;
+    return 0;
+}
+
 function startStopRecording() {
     if (!isRecording) {
+        if (!isSaved && recording.length > 0) {
+            if (!confirm("Current recording not saved! Start new recording anyway?")) return;
+        }
+        
         isRecording = true;
         isPaused = false;
+        isPlaying = false; // Stop playback if running
         recording = [];
         startTime = performance.now();
         totalPausedTime = 0;
-        for (let i = 0; i < 15; i++) recording.push({ t: 0, m: i, v: motors[i] });
+        virtualTime = 0;
         
-        recordBtn.innerHTML = '<i data-lucide="square"></i> STOP';
+        // Record baseline
+        for (let i = 0; i < 15; i++) isSaved = false;
+        recording.push({ t: 0, m: i, v: motors[i] });
+        const s = getPSettings();
+        isSaved = false;
+        recording.push({ t: 0, m: 15, v: getActivePatternVal() });
+        isSaved = false;
+        recording.push({ t: 0, m: 16, v: s.speed * 40.95 });
+        isSaved = false;
+        recording.push({ t: 0, m: 17, v: s.power });
+        isSaved = false;
+        recording.push({ t: 0, m: 18, v: s.spread * 40.95 });
+        isSaved = false;
+        recording.push({ t: 0, m: 19, v: s.chaos * 40.95 });
+        isSaved = false;
+        recording.push({ t: 0, m: 20, v: s.lerpSpeed * 40.95 });
+        
+        recordBtn.innerHTML = '<i data-lucide="square"></i> STOP REC';
         recordBtn.classList.add('active');
-        pauseBtn.disabled = false;
-        playBtn.style.display = 'none';
+        recordBtn.style.color = '#ff3e3e';
+        recordBtn.style.borderColor = '#ff3e3e';
+        
+        stopPlaybackBtn.disabled = false; // Enable stop button
+        playBtn.disabled = true;
         updateTimer();
         lucide.createIcons();
     } else {
         isRecording = false;
+        recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
         recordBtn.classList.remove('active');
-        pauseBtn.disabled = true;
-        playBtn.style.display = 'flex';
+        recordBtn.style.color = '';
+        recordBtn.style.borderColor = '';
+        
+        stopPlaybackBtn.disabled = false;
         playBtn.disabled = recording.length === 0;
         lucide.createIcons();
         updateTimelineTotal();
         document.querySelector('.timeline-container').classList.add('visible');
         renderSequencer();
+        
+        isSaved = false;
 
         // Auto Save
-        if (document.getElementById('autoSaveToggle').checked && recording.length > 15) {
+        if (document.getElementById('autoSaveToggle').checked && recording.length > 21) {
             exportBtn.click();
         }
     }
+}
+
+function stopPlayback() {
+    isPlaying = false;
+    isRecording = false;
+    virtualTime = 0;
+    playbackIndex = 0;
+    document.getElementById('timelineScrubber').value = 0;
+    document.getElementById('timelineCurrent').innerText = "00:00";
+    
+    // Remove active styles from record
+    recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
+    recordBtn.classList.remove('active');
+    recordBtn.style.color = '';
+    recordBtn.style.borderColor = '';
+    
+    // Play button reset
+    playBtn.innerHTML = '<i data-lucide="play"></i> PLAY';
+    
+    // Update Playhead UI
+    const svgPlayhead = document.getElementById('svg-playhead');
+    if (svgPlayhead) {
+        svgPlayhead.setAttribute('x1', 0);
+        svgPlayhead.setAttribute('x2', 0);
+    }
+    
+    // Reset state to t=0
+    if (recording.length > 0) applyStateAtTime(0);
+    
+    lucide.createIcons();
 }
 
 function pauseRecording() {
@@ -599,7 +802,8 @@ document.getElementById('importFile').onchange = (e) => {
             recording = [];
             const player = new MidiPlayer.Player((event) => {
                 if (event.name === 'Note on') {
-                    recording.push({
+                    isSaved = false;
+        recording.push({
                         t: event.tick * 2, // Approximate timing
                         m: (event.noteNumber - 60) % 15,
                         v: Math.floor((event.velocity / 127) * 4095)
@@ -651,7 +855,8 @@ exportBtn.onclick = () => {
         const dataLen = [ (data.length >> 24) & 0xFF, (data.length >> 16) & 0xFF, (data.length >> 8) & 0xFF, data.length & 0xFF ];
         const blob = new Blob([new Uint8Array([...header, ...trackHead, ...dataLen, ...data])], {type: 'audio/midi'});
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        isSaved = true;
+    const a = document.createElement('a');
         a.href = url;
         const name = document.getElementById('recordName').value || `motor_sequence_${Date.now()}`;
         a.download = `${name}.mid`;
@@ -661,6 +866,7 @@ exportBtn.onclick = () => {
 
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
+    isSaved = true;
     const a = document.createElement('a');
     a.href = url;
     const name = document.getElementById('recordName').value || `motor_sequence_${Date.now()}`;
@@ -685,7 +891,8 @@ Object.keys(pMap).forEach(id => {
             if (isRecording && !isPaused) {
                 let v = parseInt(e.target.value);
                 if (id !== 'p_power') v = v * 40.95;
-                recording.push({ t: performance.now() - startTime - totalPausedTime, m: pMap[id], v: v });
+                isSaved = false;
+        recording.push({ t: performance.now() - startTime - totalPausedTime, m: pMap[id], v: v });
             }
         });
     }
@@ -714,7 +921,8 @@ document.querySelectorAll('.pattern-btn').forEach(btn => {
             if (pattern === 'wave') pVal = 2000;
             if (pattern === 'pulse') pVal = 3000;
             if (pattern === 'ramp') pVal = 4000;
-            recording.push({ t: performance.now() - startTime - totalPausedTime, m: 15, v: pVal });
+            isSaved = false;
+        recording.push({ t: performance.now() - startTime - totalPausedTime, m: 15, v: pVal });
         }
 
         btn.classList.add('active');
