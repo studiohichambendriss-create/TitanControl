@@ -29,6 +29,20 @@ const recordBtn = document.getElementById('recordBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const playBtn = document.getElementById('playBtn');
 const recordTimer = document.getElementById('recordTimer');
+
+const newSeqBtn = document.getElementById('newSeqBtn');
+if (newSeqBtn) {
+    newSeqBtn.onclick = () => {
+        if (isRecording) startStopRecording();
+        recording = [];
+        renderSequencer();
+        document.getElementById('timelineScrubber').value = 0;
+        document.getElementById('timelineCurrent').innerText = "00:00";
+        document.getElementById('timelineTotal').innerText = "00:00";
+        playBtn.disabled = true;
+    };
+}
+
 const exportBtn = document.getElementById('exportBtn');
 
 let midiMap = JSON.parse(localStorage.getItem('titan_v2_midi_map') || '{}');
@@ -49,7 +63,8 @@ let isMappingPianoHover = false;
 const motorColors = [
     '#FF3E3E', '#FF8A00', '#FFD600', '#A3FF00', '#00FF47', 
     '#00FFB2', '#00F2FF', '#0085FF', '#2900FF', '#9E00FF', 
-    '#FF00D6', '#FF005C', '#FFFFFF', '#A0A0A0', '#505050'
+    '#FF00D6', '#FF005C', '#FFFFFF', '#A0A0A0', '#505050',
+    '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#00BCD4'
 ];
 
 // No global midiMapBtn anymore
@@ -426,7 +441,22 @@ function updateTimer() {
     if (isPlaying) {
         now = virtualTime;
         document.getElementById('timelineCurrent').innerText = formatTimeShort(now);
+        
+    if (isPlaying) {
+        document.getElementById('timelineCurrent').innerText = formatTimeShort(now);
         document.getElementById('timelineScrubber').value = Math.floor(now);
+        const svgPlayhead = document.getElementById('svg-playhead');
+        if (svgPlayhead) {
+            const svg = svgPlayhead.parentElement;
+            if (svg && recording.length > 0) {
+                const maxT = recording[recording.length - 1].t || 1000;
+                const x = (now / maxT) * svg.clientWidth;
+                svgPlayhead.setAttribute('x1', x);
+                svgPlayhead.setAttribute('x2', x);
+            }
+        }
+    }
+
     }
 
     const ms = Math.floor(now % 1000).toString().padStart(3, '0');
@@ -518,7 +548,32 @@ function runPlayback() {
 
     while (playbackIndex < recording.length && recording[playbackIndex].t <= virtualTime) {
         const event = recording[playbackIndex];
-        setMotor(event.m, event.v, true);
+        
+        const event = recording[playbackIndex];
+        if (event.m < 15) {
+            setMotor(event.m, event.v, true);
+        } else {
+            if (event.m === 15) {
+                let patName = '';
+                if (event.v === 1000) patName = 'chaos';
+                else if (event.v === 2000) patName = 'wave';
+                else if (event.v === 3000) patName = 'pulse';
+                else if (event.v === 4000) patName = 'ramp';
+                if (patName) {
+                    const btn = document.querySelector(`.pattern-btn[data-pattern="${patName}"]`);
+                    if (btn && !btn.classList.contains('active')) {
+                        btn.click();
+                    }
+                } else {
+                    stopPattern();
+                }
+            } else if (event.m === 16) { document.getElementById('p_speed').value = event.v / 40.95; }
+            else if (event.m === 17) { document.getElementById('p_power').value = event.v; }
+            else if (event.m === 18) { document.getElementById('p_spread').value = event.v / 40.95; }
+            else if (event.m === 19) { document.getElementById('p_chaos').value = event.v / 40.95; }
+            else if (event.m === 20) { document.getElementById('p_chaos_lerp_speed').value = event.v / 40.95; }
+        }
+
         playbackIndex++;
     }
     
@@ -637,6 +692,21 @@ function stopPattern() {
     document.querySelectorAll('.pattern-settings .setting').forEach(s => s.style.display = 'none');
 }
 
+
+const pMap = { p_speed: 16, p_power: 17, p_spread: 18, p_chaos: 19, p_chaos_lerp_speed: 20 };
+Object.keys(pMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('input', (e) => {
+            if (isRecording && !isPaused) {
+                let v = parseInt(e.target.value);
+                if (id !== 'p_power') v = v * 40.95;
+                recording.push({ t: performance.now() - startTime - totalPausedTime, m: pMap[id], v: v });
+            }
+        });
+    }
+});
+
 const getPSettings = () => ({
     speed: parseInt(document.getElementById('p_speed').value) / 50,
     power: parseInt(document.getElementById('p_power').value),
@@ -654,6 +724,15 @@ document.querySelectorAll('.pattern-btn').forEach(btn => {
         if (isActive) return; 
 
         const pattern = btn.dataset.pattern;
+        if (isRecording && !isPaused) {
+            let pVal = 0;
+            if (pattern === 'chaos') pVal = 1000;
+            if (pattern === 'wave') pVal = 2000;
+            if (pattern === 'pulse') pVal = 3000;
+            if (pattern === 'ramp') pVal = 4000;
+            recording.push({ t: performance.now() - startTime - totalPausedTime, m: 15, v: pVal });
+        }
+
         btn.classList.add('active');
         document.getElementById('patternSettings').classList.add('active');
         
@@ -1146,7 +1225,7 @@ function renderSequencer() {
     
     if (recording.length === 0) return;
     
-    const motorEvents = Array(15).fill(0).map(() => []);
+    const motorEvents = Array(21).fill(0).map(() => []);
     recording.forEach(evt => motorEvents[evt.m].push(evt));
     
     const maxT = recording[recording.length - 1].t || 1000;
@@ -1213,7 +1292,18 @@ function renderSequencer() {
         });
     });
     
-    track.appendChild(svg);
+    
+    const playhead = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    playhead.id = 'svg-playhead';
+    playhead.setAttribute('x1', 0);
+    playhead.setAttribute('y1', 0);
+    playhead.setAttribute('x2', 0);
+    playhead.setAttribute('y2', svgHeight);
+    playhead.setAttribute('stroke', '#fff');
+    playhead.setAttribute('stroke-width', '2');
+    svg.appendChild(playhead);
+
+track.appendChild(svg);
     
     const moveHandler = (e) => {
         if (!draggedNode) return;
@@ -1232,6 +1322,147 @@ function renderSequencer() {
         let d = `M ${getX(events[0].t)} ${getY(events[0].v)}`;
         for (let i = 1; i < events.length; i++) {
             d += ` L ${getX(events[i].t)} ${getY(events[i].v)}`;
+        }
+        d += ` L ${svgWidth} ${getY(events[events.length - 1].v)}`;
+        const path = svg.querySelector(`#path-m${draggedNode.m}`);
+        if (path) path.setAttribute('d', d);
+    };
+    
+    const upHandler = () => {
+        if (draggedNode) draggedNode = null;
+    };
+    
+    window.addEventListener('mousemove', moveHandler);
+    window.addEventListener('mouseup', upHandler);
+    
+    track._cleanUp = () => {
+        window.removeEventListener('mousemove', moveHandler);
+        window.removeEventListener('mouseup', upHandler);
+    };
+}
+
+
+function renderSequencer() {
+    const track = document.getElementById('sequencerTracks');
+    if (!track) return;
+    
+    if (track._cleanUp) track._cleanUp();
+    track.innerHTML = '';
+    
+    if (recording.length === 0) return;
+    
+    const motorEvents = Array(21).fill(0).map(() => []);
+    recording.forEach(evt => {
+        if (evt.m < 21) motorEvents[evt.m].push(evt);
+    });
+    
+    const maxT = recording[recording.length - 1].t || 1000;
+    
+    const svgWidth = Math.max(track.clientWidth, maxT / 10); 
+    const svgHeight = track.clientHeight - 20;
+    
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', svgWidth);
+    svg.setAttribute('height', svgHeight);
+    svg.style.overflow = 'visible';
+    svg.style.marginTop = '10px';
+    
+    const getX = (t) => (t / maxT) * svgWidth;
+    const getY = (v) => svgHeight - (v / 4095) * svgHeight;
+    
+    // Draw paths using Bezier curve
+    motorEvents.forEach((events, m) => {
+        if (events.length === 0) return;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let d = `M ${getX(events[0].t)} ${getY(events[0].v)}`;
+        
+        for (let i = 1; i < events.length; i++) {
+            const e1 = events[i-1];
+            const e2 = events[i];
+            const x1 = getX(e1.t);
+            const y1 = getY(e1.v);
+            const x2 = getX(e2.t);
+            const y2 = getY(e2.v);
+            const cx = (x1 + x2) / 2;
+            d += ` C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
+        }
+        d += ` L ${svgWidth} ${getY(events[events.length - 1].v)}`;
+        
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', motorColors[m] || '#ffffff');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-opacity', '0.6');
+        path.id = `path-m${m}`;
+        svg.appendChild(path);
+    });
+    
+    // Draw nodes
+    motorEvents.forEach((events, m) => {
+        events.forEach((evt, idx) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', getX(evt.t));
+            circle.setAttribute('cy', getY(evt.v));
+            circle.setAttribute('r', 6);
+            circle.setAttribute('fill', motorColors[m] || '#ffffff');
+            circle.setAttribute('stroke', '#000');
+            circle.setAttribute('stroke-width', '2');
+            circle.style.cursor = 'ns-resize';
+            
+            circle.onmousedown = (e) => {
+                e.stopPropagation();
+                draggedNode = { circle, evt, m, idx };
+                document.querySelectorAll('.motor-card').forEach(c => c.style.boxShadow = '');
+                const card = document.getElementById(`card-${m}`);
+                if (card) {
+                    card.style.boxShadow = `0 0 15px ${motorColors[m] || '#ffffff'}`;
+                    card.style.borderColor = motorColors[m] || '#ffffff';
+                    setTimeout(() => {
+                        card.style.boxShadow = '';
+                        card.style.borderColor = 'var(--glass-border)';
+                    }, 2000);
+                }
+            };
+            
+            svg.appendChild(circle);
+        });
+    });
+    
+    // Playhead line
+    const playhead = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    playhead.id = 'svg-playhead';
+    playhead.setAttribute('x1', 0);
+    playhead.setAttribute('y1', 0);
+    playhead.setAttribute('x2', 0);
+    playhead.setAttribute('y2', svgHeight);
+    playhead.setAttribute('stroke', '#fff');
+    playhead.setAttribute('stroke-width', '2');
+    svg.appendChild(playhead);
+
+    track.appendChild(svg);
+    
+    const moveHandler = (e) => {
+        if (!draggedNode) return;
+        const rect = svg.getBoundingClientRect();
+        let y = e.clientY - rect.top;
+        if (y < 0) y = 0;
+        if (y > svgHeight) y = svgHeight;
+        
+        const newVal = Math.round(4095 - (y / svgHeight) * 4095);
+        draggedNode.evt.v = newVal;
+        draggedNode.circle.setAttribute('cy', y);
+        
+        if (!isPlaying && !isRecording && draggedNode.m < 15) {
+            setMotor(draggedNode.m, newVal, true);
+        }
+        
+        const events = motorEvents[draggedNode.m];
+        let d = `M ${getX(events[0].t)} ${getY(events[0].v)}`;
+        for (let i = 1; i < events.length; i++) {
+            const e1 = events[i-1];
+            const e2 = events[i];
+            const cx = (getX(e1.t) + getX(e2.t)) / 2;
+            d += ` C ${cx} ${getY(e1.v)}, ${cx} ${getY(e2.v)}, ${getX(e2.t)} ${getY(e2.v)}`;
         }
         d += ` L ${svgWidth} ${getY(events[events.length - 1].v)}`;
         const path = svg.querySelector(`#path-m${draggedNode.m}`);
