@@ -64,16 +64,14 @@ class TitanStatusApp:
         # Tail bridge.log for live telemetry
         threading.Thread(target=self.tail_log, daemon=True).start()
 
-    def get_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def get_ips(self):
+        ips = []
         try:
-            s.connect(('10.255.255.255', 1))
-            IP = s.getsockname()[0]
-        except Exception:
-            IP = '127.0.0.1'
-        finally:
-            s.close()
-        return IP
+            output = subprocess.check_output(['hostname', '-I']).decode()
+            ips = output.strip().split()
+        except:
+            pass
+        return ips
 
     def find_arduino(self):
         ports = list(serial.tools.list_ports.comports())
@@ -84,19 +82,31 @@ class TitanStatusApp:
 
     def update_loop(self):
         while True:
-            ip = self.get_ip()
-            is_ap = ip.startswith('192.168.4')
+            ips = self.get_ips()
             port = self.find_arduino()
 
-            self.root.after(0, self.update_ui, ip, is_ap, port)
+            self.root.after(0, self.update_ui, ips, port)
             time.sleep(2)
 
-    def update_ui(self, ip, is_ap, port):
-        self.ip_val.config(text=ip)
-        if is_ap:
-            self.wifi_val.config(text="ACTIVE (TitanBridge)", fg='#00ff47')
+    def update_ui(self, ips, port):
+        # Determine AP status
+        is_ap = any(ip.startswith('192.168.4') for ip in ips)
+        display_ip = ", ".join(ips) if ips else "127.0.0.1"
+        
+        self.ip_val.config(text=display_ip)
+        
+        if is_ap or os.path.exists('/sys/class/net/wlan0'):
+            # Check if hotspot connection is active via nmcli
+            try:
+                res = subprocess.check_output(['nmcli', '-t', '-f', 'NAME,DEVICE,STATE', 'con', 'show', '--active']).decode()
+                if "TitanHotspot" in res or "Hotspot" in res:
+                    self.wifi_val.config(text="ACTIVE (TitanBridge)", fg='#00ff47')
+                else:
+                    self.wifi_val.config(text="WIFI READY", fg='#ff8a00')
+            except:
+                self.wifi_val.config(text="WIFI ON", fg='#00ff47')
         else:
-            self.wifi_val.config(text="NOT IN AP MODE", fg='#ff3e3e')
+            self.wifi_val.config(text="OFFLINE", fg='#ff3e3e')
         
         if port:
             self.ard_val.config(text=f"CONNECTED ({port})", fg='#0085ff')
