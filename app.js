@@ -1,3 +1,4 @@
+let draggedNode = null;
 let port;
 let writer;
 let socket; // Bridge socket
@@ -28,6 +29,7 @@ const statusIndicator = document.getElementById('connectionStatus');
 const recordBtn = document.getElementById('recordBtn');
 const stopPlaybackBtn = document.getElementById('stopPlaybackBtn');
 const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 const recordTimer = document.getElementById('recordTimer');
 
 let isSaved = true;
@@ -545,7 +547,8 @@ function startStopRecording() {
         recordBtn.style.color = '#ff3e3e';
         recordBtn.style.borderColor = '#ff3e3e';
         
-        stopPlaybackBtn.disabled = false; // Enable stop button
+        stopPlaybackBtn.style.display = 'none';
+        pauseBtn.disabled = false;
         playBtn.disabled = true;
         updateTimer();
         lucide.createIcons();
@@ -556,7 +559,7 @@ function startStopRecording() {
         recordBtn.style.color = '';
         recordBtn.style.borderColor = '';
         
-        stopPlaybackBtn.disabled = false;
+        stopPlaybackBtn.style.display = 'inline-flex';
         playBtn.disabled = recording.length === 0;
         lucide.createIcons();
         updateTimelineTotal();
@@ -669,6 +672,7 @@ function updateTimer() {
 function startStopPlayback() {
     if (isRecording) return;
     if (!isPlaying) {
+        isPaused = false;
         if (recording.length === 0) return;
         isPlaying = true;
         isPaused = false;
