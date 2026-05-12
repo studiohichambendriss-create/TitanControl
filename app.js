@@ -311,29 +311,11 @@ async function sendCommand(cmd) {
     if (socket && socket.connected) {
         socket.emit('command', cmd);
     }
-} else if (socket && socket.connected) {
-        socket.emit('command', cmd);
-    }
 }
 
 // Auto-init Bridge if on network
-if (typeof io !== 'undefined') {
-    socket = io();
-    socket.on('connect', () => {
-        console.log("Connected to Titan Bridge");
-    });
-    socket.on('status', (data) => {
-        if (data.serial === 'ONLINE') {
-            statusIndicator.innerText = 'BRIDGE: ONLINE';
-            statusIndicator.classList.add('online');
-            connectBtn.style.display = 'none';
-        } else {
-            statusIndicator.innerText = 'BRIDGE: OFFLINE';
-            statusIndicator.classList.remove('online');
-            // Don't show button if we are remote, but for now leave it
-            connectBtn.style.display = 'block'; 
-        }
-    });
+if (typeof io !== 'undefined' && !socket) {
+    // Only if not already connected via button
 }
 
 async function setMotor(id, val, skipRecord = false) {
