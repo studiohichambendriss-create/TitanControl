@@ -125,6 +125,11 @@ function applyStateAtTime(t) {
             else if (m === 18) { document.getElementById('p_spread').value = v / 40.95; }
             else if (m === 19) { document.getElementById('p_chaos').value = v / 40.95; }
             else if (m === 20) { document.getElementById('p_chaos_lerp_speed').value = v / 40.95; }
+
+            else if (m === 21) {
+                stopAll(true);
+            }
+
             
             // Trigger input events so any UI listeners (like number values next to sliders) update
             if (m >= 16 && m <= 20) {
@@ -301,7 +306,7 @@ document.getElementById('mapHoverMidiBtn').onclick = () => {
 }
 
 function updateSystemMidiUI() {
-    ['REC', 'PAUSE', 'PLAY', 'STOP', 'SPEED'].forEach(act => {
+    ['REC', 'PAUSE', 'PLAY', 'STOP', 'SPEED', 'STOP_SEQ'].forEach(act => {
         const lbl = document.getElementById(`status-${act}`);
         if (!lbl) return;
         const mapped = systemMidiMap[act];
@@ -339,11 +344,12 @@ window.addEventListener('click', (e) => {
 });
 
 // Setup hover for buttons
-['REC', 'PAUSE', 'PLAY', 'STOP', 'SPEED'].forEach(action => {
+['REC', 'PAUSE', 'PLAY', 'STOP', 'SPEED', 'STOP_SEQ'].forEach(action => {
     let btnId;
     if (action === 'REC') btnId = 'recordBtn';
     else if (action === 'STOP') btnId = 'stopAllBtn';
     else if (action === 'SPEED') btnId = 'playbackSpeed';
+    else if (action === 'STOP_SEQ') btnId = 'stopPlaybackBtn';
     else btnId = `${action.toLowerCase()}Btn`;
     
     const btn = document.getElementById(btnId);
@@ -543,7 +549,7 @@ function startStopRecording() {
         recording.push({ t: 0, m: 19, v: parseInt(document.getElementById('p_chaos').value) * 40.95 });
         recording.push({ t: 0, m: 20, v: parseInt(document.getElementById('p_chaos_lerp_speed').value) * 40.95 });
         
-        recordBtn.innerHTML = '<i data-lucide="square"></i> STOP REC';
+        recordBtn.innerHTML = '<i data-lucide="square"></i> STOP REC'; recordBtn.style.minWidth = '120px';
         recordBtn.classList.add('active');
         recordBtn.style.color = '#ff3e3e';
         recordBtn.style.borderColor = '#ff3e3e';
@@ -781,6 +787,11 @@ function runPlayback() {
             else if (event.m === 18) { document.getElementById('p_spread').value = event.v / 40.95; }
             else if (event.m === 19) { document.getElementById('p_chaos').value = event.v / 40.95; }
             else if (event.m === 20) { document.getElementById('p_chaos_lerp_speed').value = event.v / 40.95; }
+
+            else if (event.m === 21) {
+                stopAll(true);
+            }
+
         }
 
         playbackIndex++;
