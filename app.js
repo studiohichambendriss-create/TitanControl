@@ -307,7 +307,11 @@ async function sendCommand(cmd) {
     if (writer) {
         const encoder = new TextEncoder();
         await writer.write(encoder.encode(cmd + '\n'));
-    } else if (socket && socket.connected) {
+    }
+    if (socket && socket.connected) {
+        socket.emit('command', cmd);
+    }
+} else if (socket && socket.connected) {
         socket.emit('command', cmd);
     }
 }
@@ -547,8 +551,6 @@ function runPlayback() {
     }
 
     while (playbackIndex < recording.length && recording[playbackIndex].t <= virtualTime) {
-        const event = recording[playbackIndex];
-        
         const event = recording[playbackIndex];
         if (event.m < 15) {
             setMotor(event.m, event.v, true);

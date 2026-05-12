@@ -47,6 +47,15 @@
                 <h1>TITAN<span>15</span></h1>
             </div>
             <div class="header-actions">
+                <div class="bridge-controls" style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 8px;">
+                    <select id="piIp" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 4px 8px; font-size: 11px; width: 160px;">
+                        <option value="">SELECT PI...</option>
+                        <option value="titan-pi.local">TITAN PI (.local)</option>
+                        <option value="raspberrypi.local">RASPBERRY PI (.local)</option>
+                        <option value="localhost">LOCAL HOST</option>
+                    </select>
+                    <button id="connectBridgeBtn" class="btn-primary" style="padding: 4px 12px; font-size: 11px;">CONNECT PI</button>
+                </div>
                 <button id="connectBtn" class="btn-primary">
                     <i data-lucide="plug"></i> Connect Arduino
                 </button>
