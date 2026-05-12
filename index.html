@@ -28,8 +28,17 @@
 
 <body>
     <div id="loader">
-        <h1>LOADING TITAN...</h1>
+        <h1 id="loaderText">LOADING TITAN...</h1>
+        <div id="errorLog" style="color: #ff3e3e; font-family: monospace; font-size: 12px; margin-top: 20px; text-align: center;"></div>
     </div>
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            const log = document.getElementById('errorLog');
+            if (log) log.innerHTML += `ERROR: ${msg}<br>at ${lineNo}:${columnNo}<br>`;
+            console.error(msg, url, lineNo, columnNo, error);
+            return false;
+        };
+    </script>
     <div class="glass-container">
         <header>
             <div class="logo">
