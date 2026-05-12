@@ -46,6 +46,12 @@ let hoveredAction = null;
 let pianoHoverMidiSignal = localStorage.getItem('titan_piano_hover_midi');
 let isMappingPianoHover = false;
 
+const motorColors = [
+    '#FF3E3E', '#FF8A00', '#FFD600', '#A3FF00', '#00FF47', 
+    '#00FFB2', '#00F2FF', '#0085FF', '#2900FF', '#9E00FF', 
+    '#FF00D6', '#FF005C', '#FFFFFF', '#A0A0A0', '#505050'
+];
+
 // No global midiMapBtn anymore
 
 // Initialize Motors
@@ -75,6 +81,7 @@ for (let i = 0; i < 15; i++) {
         }
     };
     card.innerHTML = `
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: ${motorColors[i]}; margin-bottom: 2px;"></div>
         <h3>MOTOR ${i + 1}</h3>
         <input type="range" min="0" max="4095" value="0" id="m${i}" class="fader">
         <div class="speed-val" id="v${i}">0</div>
@@ -366,9 +373,10 @@ function startStopRecording() {
         lucide.createIcons();
     } else {
         isRecording = false;
-        recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
         recordBtn.classList.remove('active');
         pauseBtn.disabled = true;
+        playBtn.style.display = 'flex';
+        playBtn.disabled = recording.length === 0;
         lucide.createIcons();
         updateTimelineTotal();
         document.querySelector('.timeline-container').classList.add('visible');
@@ -1126,23 +1134,119 @@ document.getElementById('pianoHoverLerpSpeed').oninput = (e) => {
 // (Logic already in place via selectedMotorId)
 
 // Sequencer UI
+// Sequencer UI
+let draggedNode = null;
+
 function renderSequencer() {
     const track = document.getElementById('sequencerTracks');
     if (!track) return;
+    
+    if (track._cleanUp) track._cleanUp();
     track.innerHTML = '';
     
-    recording.forEach((evt) => {
-        const step = document.createElement('div');
-        step.className = 'seq-step';
-        step.innerHTML = `
-            <span>M${evt.m + 1}</span>
-            <input type="range" class="seq-fader" value="${evt.v}" min="0" max="4095">
-        `;
-        const fader = step.querySelector('.seq-fader');
-        fader.oninput = (e) => {
-            evt.v = parseInt(e.target.value);
-            if (!isPlaying && !isRecording) setMotor(evt.m, evt.v, true);
-        };
-        track.appendChild(step);
+    if (recording.length === 0) return;
+    
+    const motorEvents = Array(15).fill(0).map(() => []);
+    recording.forEach(evt => motorEvents[evt.m].push(evt));
+    
+    const maxT = recording[recording.length - 1].t || 1000;
+    
+    const svgWidth = Math.max(track.clientWidth, maxT / 10); 
+    const svgHeight = track.clientHeight - 20;
+    
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', svgWidth);
+    svg.setAttribute('height', svgHeight);
+    svg.style.overflow = 'visible';
+    svg.style.marginTop = '10px';
+    
+    const getX = (t) => (t / maxT) * svgWidth;
+    const getY = (v) => svgHeight - (v / 4095) * svgHeight;
+    
+    // Draw paths
+    motorEvents.forEach((events, m) => {
+        if (events.length === 0) return;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let d = `M ${getX(events[0].t)} ${getY(events[0].v)}`;
+        for (let i = 1; i < events.length; i++) {
+            d += ` L ${getX(events[i].t)} ${getY(events[i].v)}`;
+        }
+        d += ` L ${svgWidth} ${getY(events[events.length - 1].v)}`;
+        
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', motorColors[m]);
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-opacity', '0.6');
+        path.id = `path-m${m}`;
+        svg.appendChild(path);
     });
+    
+    // Draw nodes
+    motorEvents.forEach((events, m) => {
+        events.forEach((evt, idx) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', getX(evt.t));
+            circle.setAttribute('cy', getY(evt.v));
+            circle.setAttribute('r', 6);
+            circle.setAttribute('fill', motorColors[m]);
+            circle.setAttribute('stroke', '#000');
+            circle.setAttribute('stroke-width', '2');
+            circle.style.cursor = 'ns-resize';
+            
+            circle.onmousedown = (e) => {
+                e.stopPropagation();
+                draggedNode = { circle, evt, m, idx };
+                document.querySelectorAll('.motor-card').forEach(c => c.style.boxShadow = '');
+                const card = document.getElementById(`card-${m}`);
+                if (card) {
+                    card.style.boxShadow = `0 0 15px ${motorColors[m]}`;
+                    card.style.borderColor = motorColors[m];
+                    setTimeout(() => {
+                        card.style.boxShadow = '';
+                        card.style.borderColor = 'var(--glass-border)';
+                    }, 2000);
+                }
+            };
+            
+            svg.appendChild(circle);
+        });
+    });
+    
+    track.appendChild(svg);
+    
+    const moveHandler = (e) => {
+        if (!draggedNode) return;
+        const rect = svg.getBoundingClientRect();
+        let y = e.clientY - rect.top;
+        if (y < 0) y = 0;
+        if (y > svgHeight) y = svgHeight;
+        
+        const newVal = Math.round(4095 - (y / svgHeight) * 4095);
+        draggedNode.evt.v = newVal;
+        draggedNode.circle.setAttribute('cy', y);
+        
+        if (!isPlaying && !isRecording) setMotor(draggedNode.m, newVal, true);
+        
+        const events = motorEvents[draggedNode.m];
+        let d = `M ${getX(events[0].t)} ${getY(events[0].v)}`;
+        for (let i = 1; i < events.length; i++) {
+            d += ` L ${getX(events[i].t)} ${getY(events[i].v)}`;
+        }
+        d += ` L ${svgWidth} ${getY(events[events.length - 1].v)}`;
+        const path = svg.querySelector(`#path-m${draggedNode.m}`);
+        if (path) path.setAttribute('d', d);
+    };
+    
+    const upHandler = () => {
+        if (draggedNode) draggedNode = null;
+    };
+    
+    window.addEventListener('mousemove', moveHandler);
+    window.addEventListener('mouseup', upHandler);
+    
+    track._cleanUp = () => {
+        window.removeEventListener('mousemove', moveHandler);
+        window.removeEventListener('mouseup', upHandler);
+    };
 }
