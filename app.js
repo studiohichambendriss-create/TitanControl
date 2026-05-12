@@ -561,8 +561,9 @@ function startStopRecording() {
         recordBtn.innerHTML = '<i data-lucide="square"></i> FINISH RECORDING';
         recordBtn.style.minWidth = '180px';
         recordBtn.classList.add('active');
-        recordBtn.style.color = '#ff3e3e';
+        recordBtn.style.color = '#fff';
         recordBtn.style.borderColor = '#ff3e3e';
+        recordBtn.style.background = '#ff3e3e';
         
         stopPlaybackBtn.style.display = 'none';
         pauseBtn.disabled = false;
