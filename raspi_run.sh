@@ -8,6 +8,9 @@ echo "🛸 Starting TITAN BRIDGE..."
 pkill -9 -f bridge.py
 pkill -9 -f chromium
 
+# Clear old logs so Python GUI doesn't show old ghosts!
+> bridge.log
+
 # Start Bridge in background
 nohup python3 -u bridge.py > bridge.log 2>&1 &
 
