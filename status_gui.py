@@ -132,7 +132,8 @@ class TitanStatusApp:
             
         process = subprocess.Popen(['tail', '-f', log_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for line in process.stdout:
-            if "M" in line or "Connected" in line: # Only show motor commands and new connections
+            # Show important robot talk
+            if any(x in line for x in ["M", "Connected", "LOOP", "VIRTUAL", "Executing", "Sent"]):
                 self.root.after(0, self.add_log, line.strip())
 
     def add_log(self, msg):
