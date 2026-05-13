@@ -34,6 +34,23 @@ function formatTime(ms) {
     return `${m}:${s.toString().padStart(2, '0')}.${msPart}`;
 }
 
+socket.on('sync_data', (data) => {
+    currentSequence = data.sequence || [];
+});
+
+socket.on('status', (data) => {
+    const ard = document.getElementById('arduinoStatus');
+    if (ard) {
+        if (data.serial === 'ONLINE') {
+            ard.innerText = 'ARDUINO OK';
+            ard.style.color = '#0085ff';
+        } else {
+            ard.innerText = 'ARDUINO OFFLINE';
+            ard.style.color = '#ff3e3e';
+        }
+    }
+});
+
 socket.on('sync_time', (data) => {
     const t = data.t;
     const isPaused = data.is_paused;

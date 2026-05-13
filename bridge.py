@@ -230,6 +230,7 @@ def playback_loop():
                     
                     if m < 15:
                         cmd = f"M{m}:{v}"
+                        socketio.emit('command', cmd)
                         if ser and ser.is_open:
                             try:
                                 ser.write((cmd + '\n').encode())
@@ -243,6 +244,7 @@ def playback_loop():
                             print(msg)
                             socketio.emit('log', msg)
                     elif m == 21: # STOP ALL
+                        socketio.emit('command', 'STOP')
                         if ser and ser.is_open:
                             try:
                                 ser.write(("STOP\n").encode())
