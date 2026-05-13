@@ -125,6 +125,7 @@ def handle_autonomous_pause(is_paused):
 @socketio.on('command')
 def handle_command(cmd):
     global ser
+    print(f"📡 [REMOTE] Received Command: {cmd}")
     if ser and ser.is_open:
         try:
             ser.write((cmd + '\n').encode())
@@ -177,12 +178,14 @@ def playback_loop():
                     if ser and ser.is_open:
                         try:
                             ser.write((cmd + '\n').encode())
+                            print(f"🤖 [LOOP] Sent: {cmd}")
                         except:
                             pass
                 elif m == 21: # STOP ALL
                     if ser and ser.is_open:
                         try:
                             ser.write(("STOP\n").encode())
+                            print("🤖 [LOOP] Sent: STOP")
                         except:
                             pass
                 playback_index += 1
