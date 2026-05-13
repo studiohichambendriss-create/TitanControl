@@ -43,7 +43,7 @@ current_virtual_time = 0.0
 playback_index = 0
 last_real_time = 0.0
 sequence_file = 'sequence.json'
-autonomous_paused = False
+autonomous_paused = True # Start paused on boot!
 loop_delay_ms = 0
 
 def load_sequence():
@@ -135,7 +135,7 @@ def handle_disconnect():
 
 @socketio.on('upload_sequence')
 def handle_upload(data):
-    global current_sequence, current_virtual_time, playback_index, loop_delay_ms
+    global current_sequence, current_virtual_time, playback_index, loop_delay_ms, autonomous_paused
     
     if isinstance(data, dict) and 'sequence' in data:
         seq = data['sequence']
@@ -146,7 +146,9 @@ def handle_upload(data):
     current_sequence = seq
     current_virtual_time = 0
     playback_index = 0
+    autonomous_paused = False # Unpause when new sequence is uploaded
     try:
+
         with open(sequence_file, 'w') as f:
             json.dump({'sequence': seq, 'delay': loop_delay_ms / 1000}, f)
         print(f"✅ Saved new sequence with {len(seq)} events. Delay: {loop_delay_ms}ms")
