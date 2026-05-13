@@ -16,11 +16,8 @@ sleep 3
 
 export DISPLAY=:0
 
-echo "🌐 Keeping TitanView alive..."
-# Loop to restart browser if it closes!
-while true; do
-    # --app opens it like a normal window (NO KIOSK) so you can move it or close it!
-    chromium --no-sandbox --disable-gpu --app=http://localhost:5000/titanview
-    echo "⚠️ Chromium closed! Reopening in 3 seconds..."
-    sleep 3
-done
+echo "🌐 Opening TitanView..."
+# --app opens it like a normal window (NO KIOSK) so you can move it or close it!
+chromium --no-sandbox --disable-gpu --new-window --app=http://localhost:5000/titanview &
+
+echo "✅ TITAN 15 Dashboard is running!"
