@@ -97,15 +97,16 @@ def titanview():
 @socketio.on('connect')
 def handle_connect():
     global connected_clients, is_autonomous, current_sequence, current_virtual_time
-    # Check if this is the local Pi browser or a remote laptop
-    is_local = request.remote_addr == '127.0.0.1'
+    
+    client_ip = request.remote_addr
+    is_local = client_ip in ['127.0.0.1', '::1', 'localhost'] or client_ip == get_wlan_ip()
     
     if not is_local:
         connected_clients += 1
         is_autonomous = False # Laptop connected, give it control
-        print(f"💻 Laptop connected ({request.remote_addr}). Autonomous playback PAUSED.")
+        print(f"💻 Laptop connected ({client_ip}). Autonomous playback PAUSED.")
     else:
-        print("🖥️ Local Pi screen connected. Autonomous playback continues.")
+        print(f"🖥️ Local Pi screen connected ({client_ip}). Autonomous playback continues.")
     
     status = "CONNECTED" if ser and ser.is_open else "OFFLINE"
     socketio.emit('status', {'serial': status, 'port': SERIAL_PORT})
@@ -119,7 +120,9 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     global connected_clients, is_autonomous
-    is_local = request.remote_addr == '127.0.0.1'
+    
+    client_ip = request.remote_addr
+    is_local = client_ip in ['127.0.0.1', '::1', 'localhost'] or client_ip == get_wlan_ip()
     
     if not is_local:
         connected_clients -= 1
@@ -185,6 +188,7 @@ def sync_loop():
         socketio.emit('sync_time', {
             't': current_virtual_time,
             'is_paused': autonomous_paused,
+            'is_auto': is_autonomous,
             'delay': loop_delay_ms / 1000.0,
             'ip': get_wlan_ip()
         })

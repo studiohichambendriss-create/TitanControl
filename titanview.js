@@ -39,6 +39,7 @@ socket.on('sync_time', (data) => {
     const isPaused = data.is_paused;
     const delay = data.delay;
     const ip = data.ip;
+    const isAuto = data.is_auto;
     
     if (ip) document.getElementById('hotspotIp').innerText = `IP: ${ip}`;
     
@@ -48,7 +49,10 @@ socket.on('sync_time', (data) => {
     document.getElementById('loopTotal').innerText = formatTime(maxT);
     document.getElementById('delayVal').innerText = delay.toFixed(1) + 's';
     
-    if (isPaused) {
+    if (!isAuto) {
+        document.getElementById('modeVal').innerText = 'REMOTE CONTROL';
+        document.getElementById('modeVal').style.color = '#00f2ff';
+    } else if (isPaused) {
         document.getElementById('modeVal').innerText = 'PAUSED';
         document.getElementById('modeVal').style.color = '#ff8a00';
     } else {
