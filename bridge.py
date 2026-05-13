@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request
 from flask_socketio import SocketIO
 import serial
 import serial.tools.list_ports
@@ -73,28 +73,38 @@ def static_proxy(path):
 @socketio.on('connect')
 def handle_connect():
     global connected_clients, is_autonomous, current_sequence, current_virtual_time
-    connected_clients += 1
-    is_autonomous = False # Laptop connected, give it control
+    # Check if this is the local Pi browser or a remote laptop
+    is_local = request.remote_addr == '127.0.0.1'
+    
+    if not is_local:
+        connected_clients += 1
+        is_autonomous = False # Laptop connected, give it control
+        print(f"💻 Laptop connected ({request.remote_addr}). Autonomous playback PAUSED.")
+    else:
+        print("🖥️ Local Pi screen connected. Autonomous playback continues.")
     
     status = "CONNECTED" if ser and ser.is_open else "OFFLINE"
     socketio.emit('status', {'serial': status, 'port': SERIAL_PORT})
     
-    # Emit sync data so the web app can take over exactly where the pi is
+    # Emit sync data so the UI (local or remote) can show the current state
     socketio.emit('sync_data', {
         'sequence': current_sequence,
         'current_time': current_virtual_time
     })
-    
-    print(f"💻 Laptop connected to bridge. Total clients: {connected_clients}. Autonomous playback PAUSED.")
 
 @socketio.on('disconnect')
 def handle_disconnect():
     global connected_clients, is_autonomous
-    connected_clients -= 1
-    if connected_clients <= 0:
-        connected_clients = 0
-        is_autonomous = True
-        print("💻 All clients disconnected. Autonomous playback RESUMED.")
+    is_local = request.remote_addr == '127.0.0.1'
+    
+    if not is_local:
+        connected_clients -= 1
+        if connected_clients <= 0:
+            connected_clients = 0
+            is_autonomous = True
+            print("💻 Laptop disconnected. Autonomous playback RESUMED.")
+    else:
+        print("🖥️ Local Pi screen disconnected.")
 
 @socketio.on('upload_sequence')
 def handle_upload(data):
