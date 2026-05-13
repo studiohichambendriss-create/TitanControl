@@ -8,12 +8,21 @@ import os
 import json
 import subprocess
 
+_cached_ip = None
+_last_ip_check = 0
+
 def get_wlan_ip():
+    global _cached_ip, _last_ip_check
+    now = time.time()
+    if _cached_ip and (now - _last_ip_check) < 60:
+        return _cached_ip
     try:
         output = subprocess.check_output(['ip', '-4', 'addr', 'show', 'wlan0']).decode()
         for line in output.split('\n'):
             if 'inet ' in line:
-                return line.strip().split()[1].split('/')[0]
+                _cached_ip = line.strip().split()[1].split('/')[0]
+                _last_ip_check = now
+                return _cached_ip
     except:
         pass
     return "0.0.0.0"
@@ -208,36 +217,36 @@ def playback_loop():
                 while playback_index < len(current_sequence) and current_sequence[playback_index]['t'] <= current_virtual_time:
                     evt = current_sequence[playback_index]
                     m = evt['m']
-                v = evt['v']
-                
-                if m < 15:
-                    cmd = f"M{m}:{v}"
-                    if ser and ser.is_open:
-                        try:
-                            ser.write((cmd + '\n').encode())
-                            msg = f"🤖 [LOOP] Sent: {cmd}"
+                    v = evt['v']
+                    
+                    if m < 15:
+                        cmd = f"M{m}:{v}"
+                        if ser and ser.is_open:
+                            try:
+                                ser.write((cmd + '\n').encode())
+                                msg = f"🤖 [LOOP] Sent: {cmd}"
+                                print(msg)
+                                socketio.emit('log', msg)
+                            except:
+                                pass
+                        else:
+                            msg = f"🤖 [VIRTUAL LOOP] Sent: {cmd}"
                             print(msg)
                             socketio.emit('log', msg)
-                        except:
-                            pass
-                    else:
-                        msg = f"🤖 [VIRTUAL LOOP] Sent: {cmd}"
-                        print(msg)
-                        socketio.emit('log', msg)
-                elif m == 21: # STOP ALL
-                    if ser and ser.is_open:
-                        try:
-                            ser.write(("STOP\n").encode())
-                            msg = "🤖 [LOOP] Sent: STOP"
+                    elif m == 21: # STOP ALL
+                        if ser and ser.is_open:
+                            try:
+                                ser.write(("STOP\n").encode())
+                                msg = "🤖 [LOOP] Sent: STOP"
+                                print(msg)
+                                socketio.emit('log', msg)
+                            except:
+                                pass
+                        else:
+                            msg = "🤖 [VIRTUAL LOOP] Sent: STOP"
                             print(msg)
                             socketio.emit('log', msg)
-                        except:
-                            pass
-                    else:
-                        msg = "🤖 [VIRTUAL LOOP] Sent: STOP"
-                        print(msg)
-                        socketio.emit('log', msg)
-                playback_index += 1
+                    playback_index += 1
                 
         time.sleep(0.01) # 10ms loop
 
