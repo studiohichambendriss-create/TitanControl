@@ -520,33 +520,14 @@ async function setMotor(id, val, skipRecord = false) {
 
 // Emergency Stop
 function stopAll(skipRecord = false) {
-    if (isRecording && !isPaused && !skipRecord) {
-        isSaved = false;
-        recording.push({
-            t: performance.now() - startTime - totalPausedTime,
-            m: 21,
-            v: 1
-        });
-    }
     stopPattern();
-    isRecording = false;
-    isPlaying = false;
-    isPaused = false;
     for (let i = 0; i < 15; i++) {
-        setMotor(i, 0, true);
+        setMotor(i, 0, skipRecord);
+        targetMotors[i] = 0;
     }
     sendCommand('STOP');
-    
-    recordBtn.innerHTML = '<i data-lucide="circle"></i> REC';
-    recordBtn.style.minWidth = '';
-    recordBtn.classList.remove('active');
-    pauseBtn.disabled = true;
-    pauseBtn.innerHTML = '<i data-lucide="pause"></i> PAUSE';
-    playBtn.innerHTML = '<i data-lucide="play"></i> PLAY';
-    playBtn.style.display = 'flex';
-    playBtn.classList.remove('active');
-    document.querySelector('.timeline-container').classList.remove('visible');
-    lucide.createIcons();
+    // Clear visual hover states
+    document.querySelectorAll('.motor-card').forEach(c => c.classList.remove('hover-active', 'selecting'));
 }
 document.getElementById('stopAllBtn').onclick = stopAll;
 
@@ -1756,6 +1737,9 @@ function renderSequencer() {
 
 
 const uploadPiBtn = document.getElementById('uploadPiBtn');
+const pausePiBtn = document.getElementById('pausePiBtn');
+let isPiPaused = false;
+
 if (uploadPiBtn) {
     uploadPiBtn.onclick = () => {
         if (!socket || !socket.connected) {
@@ -1766,8 +1750,29 @@ if (uploadPiBtn) {
             alert("No sequence to upload! Record something first.");
             return;
         }
-        socket.emit('upload_sequence', recording);
+        const delaySec = parseFloat(document.getElementById('piLoopDelay').value) || 0;
+        socket.emit('upload_sequence', { sequence: recording, delay: delaySec });
+        
+        if (pausePiBtn) pausePiBtn.disabled = false;
         alert("Sequence uploaded to Pi! It will loop autonomously when you disconnect.");
     };
 }
+
+if (pausePiBtn) {
+    pausePiBtn.onclick = () => {
+        if (!socket || !socket.connected) return;
+        isPiPaused = !isPiPaused;
+        socket.emit('set_autonomous_pause', isPiPaused);
+        
+        if (isPiPaused) {
+            pausePiBtn.innerHTML = '<i data-lucide="play"></i> RESUME PI';
+            pausePiBtn.classList.add('active');
+        } else {
+            pausePiBtn.innerHTML = '<i data-lucide="pause"></i> PAUSE';
+            pausePiBtn.classList.remove('active');
+        }
+        lucide.createIcons();
+    };
+}
+
 

@@ -23,14 +23,21 @@ current_virtual_time = 0.0
 playback_index = 0
 last_real_time = 0.0
 sequence_file = 'sequence.json'
+autonomous_paused = False
+loop_delay_ms = 0
 
 def load_sequence():
-    global current_sequence
+    global current_sequence, loop_delay_ms
     if os.path.exists(sequence_file):
         try:
             with open(sequence_file, 'r') as f:
-                current_sequence = json.load(f)
-                print(f"Loaded sequence with {len(current_sequence)} events.")
+                data = json.load(f)
+                if isinstance(data, dict) and 'sequence' in data:
+                    current_sequence = data['sequence']
+                    loop_delay_ms = data.get('delay', 0) * 1000
+                else:
+                    current_sequence = data
+                print(f"Loaded sequence with {len(current_sequence)} events. Loop Delay: {loop_delay_ms}ms")
         except Exception as e:
             print(f"Error loading sequence: {e}")
 
@@ -90,17 +97,30 @@ def handle_disconnect():
         print("💻 All clients disconnected. Autonomous playback RESUMED.")
 
 @socketio.on('upload_sequence')
-def handle_upload(seq):
-    global current_sequence, current_virtual_time, playback_index
+def handle_upload(data):
+    global current_sequence, current_virtual_time, playback_index, loop_delay_ms
+    
+    if isinstance(data, dict) and 'sequence' in data:
+        seq = data['sequence']
+        loop_delay_ms = data.get('delay', 0) * 1000
+    else:
+        seq = data
+        
     current_sequence = seq
     current_virtual_time = 0
     playback_index = 0
     try:
         with open(sequence_file, 'w') as f:
-            json.dump(seq, f)
-        print(f"✅ Saved new sequence with {len(seq)} events to {sequence_file}")
+            json.dump({'sequence': seq, 'delay': loop_delay_ms / 1000}, f)
+        print(f"✅ Saved new sequence with {len(seq)} events. Delay: {loop_delay_ms}ms")
     except Exception as e:
         print(f"❌ Failed to save sequence: {e}")
+
+@socketio.on('set_autonomous_pause')
+def handle_autonomous_pause(is_paused):
+    global autonomous_paused
+    autonomous_paused = is_paused
+    print(f"Autonomous playback paused state set to: {is_paused}")
 
 @socketio.on('command')
 def handle_command(cmd):
@@ -124,7 +144,7 @@ def status_loop():
         time.sleep(2)
 
 def playback_loop():
-    global current_virtual_time, playback_index, last_real_time, is_autonomous
+    global current_virtual_time, playback_index, last_real_time, is_autonomous, autonomous_paused, loop_delay_ms
     last_real_time = time.time() * 1000.0
     
     while True:
@@ -132,7 +152,7 @@ def playback_loop():
         delta = now - last_real_time
         last_real_time = now
         
-        if is_autonomous and len(current_sequence) > 0:
+        if is_autonomous and not autonomous_paused and len(current_sequence) > 0:
             current_virtual_time += delta
             
             # Find max time to loop
@@ -141,14 +161,15 @@ def playback_loop():
                 max_t = current_sequence[-1]['t']
             if max_t <= 0: max_t = 1000
                 
-            if current_virtual_time >= max_t:
+            if current_virtual_time >= max_t + loop_delay_ms:
                 current_virtual_time = 0
                 playback_index = 0
                 
-            # Process events up to current virtual time
-            while playback_index < len(current_sequence) and current_sequence[playback_index]['t'] <= current_virtual_time:
-                evt = current_sequence[playback_index]
-                m = evt['m']
+            if current_virtual_time < max_t:
+                # Process events up to current virtual time
+                while playback_index < len(current_sequence) and current_sequence[playback_index]['t'] <= current_virtual_time:
+                    evt = current_sequence[playback_index]
+                    m = evt['m']
                 v = evt['v']
                 
                 if m < 15:

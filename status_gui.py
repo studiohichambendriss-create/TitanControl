@@ -72,6 +72,16 @@ class TitanStatusApp:
         except:
             pass
         return ips
+        
+    def get_wlan_ip(self):
+        try:
+            output = subprocess.check_output(['ip', '-4', 'addr', 'show', 'wlan0']).decode()
+            for line in output.split('\n'):
+                if 'inet ' in line:
+                    return line.strip().split()[1].split('/')[0]
+        except:
+            pass
+        return None
 
     def find_arduino(self):
         ports = list(serial.tools.list_ports.comports())
@@ -84,14 +94,15 @@ class TitanStatusApp:
         while True:
             ips = self.get_ips()
             port = self.find_arduino()
+            wlan_ip = self.get_wlan_ip()
 
-            self.root.after(0, self.update_ui, ips, port)
+            self.root.after(0, self.update_ui, ips, wlan_ip, port)
             time.sleep(2)
 
-    def update_ui(self, ips, port):
+    def update_ui(self, ips, wlan_ip, port):
         # Determine AP status
-        is_ap = any(ip.startswith('192.168.4') for ip in ips)
-        display_ip = ", ".join(ips) if ips else "127.0.0.1"
+        is_ap = wlan_ip is not None and (wlan_ip.startswith('192.168.4') or wlan_ip.startswith('10.42'))
+        display_ip = wlan_ip if wlan_ip else (ips[0] if ips else "127.0.0.1")
         
         self.ip_val.config(text=display_ip)
         
