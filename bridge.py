@@ -70,6 +70,10 @@ def index():
 def static_proxy(path):
     return send_from_directory('.', path)
 
+@app.route('/titanview')
+def titanview():
+    return send_from_directory('.', 'titanview.html')
+
 @socketio.on('connect')
 def handle_connect():
     global connected_clients, is_autonomous, current_sequence, current_virtual_time
@@ -153,6 +157,16 @@ def status_loop():
         socketio.emit('status', {'serial': status, 'port': port})
         time.sleep(2)
 
+def sync_loop():
+    while True:
+        # Emit time to all clients for UI sync
+        socketio.emit('sync_time', {
+            't': current_virtual_time,
+            'is_paused': autonomous_paused,
+            'delay': loop_delay_ms / 1000.0
+        })
+        time.sleep(0.1) # 10Hz sync
+
 def playback_loop():
     global current_virtual_time, playback_index, last_real_time, is_autonomous, autonomous_paused, loop_delay_ms
     last_real_time = time.time() * 1000.0
@@ -211,6 +225,7 @@ if __name__ == '__main__':
     # Run loops in background
     threading.Thread(target=status_loop, daemon=True).start()
     threading.Thread(target=playback_loop, daemon=True).start()
+    threading.Thread(target=sync_loop, daemon=True).start()
     
     print("🚀 Titan Bridge starting on http://0.0.0.0:5000")
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)
