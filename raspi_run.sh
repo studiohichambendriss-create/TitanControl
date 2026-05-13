@@ -25,7 +25,7 @@ python3 status_gui.py > gui.log 2>&1 &
 sleep 1
 
 # --app opens it like a normal window (NO KIOSK) so you can move it or close it!
-# --new-window and fresh profile to bypass locks/quota errors
-chromium --password-store=basic --no-sandbox --user-data-dir=/tmp/titan_chrome --new-window http://localhost:5000/titanview &
+# Aggressive flags to disable GPU and background fluff
+chromium --no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --password-store=basic --user-data-dir=/tmp/titan_chrome --new-window --disable-sync --no-first-run http://localhost:5000/titanview &
 
 echo "✅ TITAN 15 Dashboard is running!"
