@@ -99,7 +99,7 @@ def handle_connect():
     global connected_clients, is_autonomous, current_sequence, current_virtual_time
     
     client_ip = request.remote_addr
-    is_local = client_ip in ['127.0.0.1', '::1', 'localhost'] or client_ip == get_wlan_ip()
+    is_local = client_ip.startswith('127.') or client_ip == '::1' or client_ip == 'localhost' or client_ip == get_wlan_ip()
     
     if not is_local:
         connected_clients += 1
@@ -122,7 +122,7 @@ def handle_disconnect():
     global connected_clients, is_autonomous
     
     client_ip = request.remote_addr
-    is_local = client_ip in ['127.0.0.1', '::1', 'localhost'] or client_ip == get_wlan_ip()
+    is_local = client_ip.startswith('127.') or client_ip == '::1' or client_ip == 'localhost' or client_ip == get_wlan_ip()
     
     if not is_local:
         connected_clients -= 1
@@ -131,7 +131,7 @@ def handle_disconnect():
             is_autonomous = True
             print("💻 Laptop disconnected. Autonomous playback RESUMED.")
     else:
-        print("🖥️ Local Pi screen disconnected.")
+        print(f"🖥️ Local Pi screen disconnected ({client_ip}).")
 
 @socketio.on('upload_sequence')
 def handle_upload(data):
@@ -150,6 +150,11 @@ def handle_upload(data):
         with open(sequence_file, 'w') as f:
             json.dump({'sequence': seq, 'delay': loop_delay_ms / 1000}, f)
         print(f"✅ Saved new sequence with {len(seq)} events. Delay: {loop_delay_ms}ms")
+        # Tell all UI clients about the new sequence immediately!
+        socketio.emit('sync_data', {
+            'sequence': current_sequence,
+            'current_time': current_virtual_time
+        })
     except Exception as e:
         print(f"❌ Failed to save sequence: {e}")
 
