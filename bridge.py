@@ -94,6 +94,18 @@ def static_proxy(path):
 def titanview():
     return send_from_directory('.', 'titanview.html')
 
+@app.route('/play')
+def play_loop():
+    global autonomous_paused
+    autonomous_paused = False
+    return "▶️ Playback Started"
+
+@app.route('/pause')
+def pause_loop():
+    global autonomous_paused
+    autonomous_paused = True
+    return "⏸️ Playback Paused"
+
 @socketio.on('connect')
 def handle_connect():
     global connected_clients, is_autonomous, current_sequence, current_virtual_time
