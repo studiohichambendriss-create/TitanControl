@@ -133,9 +133,8 @@ def handle_command(cmd):
             print("❌ Write failed, reconnecting...")
             connect_serial()
     else:
-        # Try to reconnect if not connected
-        if connect_serial():
-            ser.write((cmd + '\n').encode())
+        # Ghost mode for testing without hardware
+        print(f"🛠️ [VIRTUAL ARDUINO] Executing: {cmd}")
 
 def status_loop():
     while True:
@@ -181,6 +180,8 @@ def playback_loop():
                             print(f"🤖 [LOOP] Sent: {cmd}")
                         except:
                             pass
+                    else:
+                        print(f"🤖 [VIRTUAL LOOP] Sent: {cmd}")
                 elif m == 21: # STOP ALL
                     if ser and ser.is_open:
                         try:
@@ -188,6 +189,8 @@ def playback_loop():
                             print("🤖 [LOOP] Sent: STOP")
                         except:
                             pass
+                    else:
+                        print("🤖 [VIRTUAL LOOP] Sent: STOP")
                 playback_index += 1
                 
         time.sleep(0.01) # 10ms loop
