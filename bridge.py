@@ -6,6 +6,17 @@ import threading
 import time
 import os
 import json
+import subprocess
+
+def get_wlan_ip():
+    try:
+        output = subprocess.check_output(['ip', '-4', 'addr', 'show', 'wlan0']).decode()
+        for line in output.split('\n'):
+            if 'inet ' in line:
+                return line.strip().split()[1].split('/')[0]
+    except:
+        pass
+    return "0.0.0.0"
 
 app = Flask(__name__, static_folder='.')
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -148,7 +159,9 @@ def handle_command(cmd):
             connect_serial()
     else:
         # Ghost mode for testing without hardware
-        print(f"🛠️ [VIRTUAL ARDUINO] Executing: {cmd}")
+        msg = f"🛠️ [VIRTUAL ARDUINO] Executing: {cmd}"
+        print(msg)
+        socketio.emit('log', msg)
 
 def status_loop():
     while True:
@@ -163,7 +176,8 @@ def sync_loop():
         socketio.emit('sync_time', {
             't': current_virtual_time,
             'is_paused': autonomous_paused,
-            'delay': loop_delay_ms / 1000.0
+            'delay': loop_delay_ms / 1000.0,
+            'ip': get_wlan_ip()
         })
         time.sleep(0.1) # 10Hz sync
 
@@ -201,20 +215,28 @@ def playback_loop():
                     if ser and ser.is_open:
                         try:
                             ser.write((cmd + '\n').encode())
-                            print(f"🤖 [LOOP] Sent: {cmd}")
+                            msg = f"🤖 [LOOP] Sent: {cmd}"
+                            print(msg)
+                            socketio.emit('log', msg)
                         except:
                             pass
                     else:
-                        print(f"🤖 [VIRTUAL LOOP] Sent: {cmd}")
+                        msg = f"🤖 [VIRTUAL LOOP] Sent: {cmd}"
+                        print(msg)
+                        socketio.emit('log', msg)
                 elif m == 21: # STOP ALL
                     if ser and ser.is_open:
                         try:
                             ser.write(("STOP\n").encode())
-                            print("🤖 [LOOP] Sent: STOP")
+                            msg = "🤖 [LOOP] Sent: STOP"
+                            print(msg)
+                            socketio.emit('log', msg)
                         except:
                             pass
                     else:
-                        print("🤖 [VIRTUAL LOOP] Sent: STOP")
+                        msg = "🤖 [VIRTUAL LOOP] Sent: STOP"
+                        print(msg)
+                        socketio.emit('log', msg)
                 playback_index += 1
                 
         time.sleep(0.01) # 10ms loop

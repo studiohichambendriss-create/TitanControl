@@ -34,30 +34,13 @@ function formatTime(ms) {
     return `${m}:${s.toString().padStart(2, '0')}.${msPart}`;
 }
 
-socket.on('connect', () => {
-    document.getElementById('connectionStatus').innerText = 'BRIDGE ONLINE';
-    document.getElementById('connectionStatus').style.color = '#00ff47';
-});
-
-socket.on('status', (data) => {
-    const ard = document.getElementById('arduinoStatus');
-    if (data.serial === 'ONLINE') {
-        ard.innerText = 'ARDUINO OK';
-        ard.style.color = '#0085ff';
-    } else {
-        ard.innerText = 'ARDUINO OFFLINE';
-        ard.style.color = '#ff3e3e';
-    }
-});
-
-socket.on('sync_data', (data) => {
-    currentSequence = data.sequence || [];
-});
-
 socket.on('sync_time', (data) => {
     const t = data.t;
     const isPaused = data.is_paused;
     const delay = data.delay;
+    const ip = data.ip;
+    
+    if (ip) document.getElementById('hotspotIp').innerText = `IP: ${ip}`;
     
     const maxT = currentSequence.length > 0 ? currentSequence[currentSequence.length - 1].t : 0;
     
@@ -76,6 +59,17 @@ socket.on('sync_time', (data) => {
     if (maxT > 0) {
         const percent = Math.min(100, (t / (maxT + (delay * 1000))) * 100);
         document.getElementById('loopFill').style.width = percent + '%';
+    }
+});
+
+socket.on('log', (msg) => {
+    const content = document.getElementById('logContent');
+    const div = document.createElement('div');
+    div.style.padding = '2px 0';
+    div.innerText = msg;
+    content.prepend(div);
+    if (content.childNodes.length > 25) {
+        content.removeChild(content.lastChild);
     }
 });
 
