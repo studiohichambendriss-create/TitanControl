@@ -1,21 +1,26 @@
 #!/bin/bash
-# 🛸 TITAN 15 RASPI LAUNCHER
-# Me start server and browser.
+# 🛸 TITAN 15 RASPI KEEPALIVE LAUNCHER
+# Me start bridge and keep TitanView alive!
 
-# Go to script dir
 cd "$(dirname "$0")"
 
-echo "🛸 Starting TITAN 15 Dashboard..."
+echo "🛸 Starting TITAN BRIDGE..."
+pkill -9 -f bridge.py
+pkill -9 -f chromium
 
-# Kill old servers
-pkill -f "python3 -m http.server 8000"
+# Start Bridge in background
+nohup python3 -u bridge.py > bridge.log 2>&1 &
 
-# Start server in back
-python3 -m http.server 8000 &
+# Wait for bridge to wake up
+sleep 3
 
-# Wait for server
-sleep 2
+export DISPLAY=:0
 
-echo "🌐 Opening Chromium..."
-# Open chromium in fullscreen/kiosk
-chromium-browser --start-fullscreen --disable-features=TranslateUI --no-first-run --check-for-update-interval=31536000 http://localhost:8000
+echo "🌐 Keeping TitanView alive..."
+# Loop to restart browser if it closes!
+while true; do
+    # --app opens it like a normal window (NO KIOSK) so you can move it or close it!
+    chromium --no-sandbox --disable-gpu --app=http://localhost:5000/titanview
+    echo "⚠️ Chromium closed! Reopening in 3 seconds..."
+    sleep 3
+done
