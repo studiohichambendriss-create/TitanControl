@@ -519,8 +519,9 @@ if (bridgeConnectBtn) {
 if (document.getElementById('bridgeStartBtn')) {
     document.getElementById('bridgeStartBtn').onclick = () => {
         if (recording.length === 0) return alert("No recording to play on Pi");
-        logTelemetry("⬆️ Syncing sequence to Pi...");
-        socket.emit('upload_sequence', { sequence: recording, delay: 0 });
+        const delay = parseFloat(document.getElementById('piLoopDelay')?.value) || 0;
+        logTelemetry(`⬆️ Syncing sequence to Pi (Delay: ${delay}s)...`);
+        socket.emit('upload_sequence', { sequence: recording, delay: delay });
         setTimeout(() => { socket.emit('control_piloop', { action: 'start' }); }, 500);
     };
 }

@@ -170,7 +170,7 @@ def handle_connect():
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    global connected_clients, is_autonomous
+    global connected_clients, is_autonomous, autonomous_paused
     client_ip = request.remote_addr
     is_local = client_ip.startswith('127.') or client_ip == '::1' or client_ip == 'localhost' or client_ip == get_wlan_ip()
     if not is_local:
@@ -178,7 +178,11 @@ def handle_disconnect():
         if connected_clients <= 0:
             connected_clients = 0
             is_autonomous = True
-            log('💻 Laptop disconnected. Autonomous Mode Active.')
+            if len(current_sequence) > 0:
+                autonomous_paused = False
+                log('💻 Laptop disconnected. RESUMING Autonomous Playback.')
+            else:
+                log('💻 Laptop disconnected. Autonomous Mode Active (Empty).')
 
 @socketio.on('upload_sequence')
 def handle_upload(data):
