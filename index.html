@@ -47,14 +47,17 @@
                 <h1>TITAN<span>15</span></h1>
             </div>
             <div class="header-actions">
-                <div class="bridge-controls" style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 8px;">
-                    <select id="piIp" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 4px 8px; font-size: 11px; width: 160px;">
-                        <option value="">SELECT PI...</option>
-                        <option value="titan-pi.local">TITAN PI (.local)</option>
-                        <option value="raspberrypi.local">RASPBERRY PI (.local)</option>
-                        <option value="localhost">LOCAL HOST</option>
-                    </select>
-                    <button id="connectBridgeBtn" class="btn-primary" style="padding: 4px 12px; font-size: 11px;">CONNECT PI</button>
+                <div class="bridge-controls" style="display: flex; gap: 8px; align-items: center; background: rgba(0, 242, 255, 0.05); padding: 8px 12px; border: 1px solid rgba(0, 242, 255, 0.1); border-radius: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <input type="text" id="raspiIp" value="10.52.24.202" placeholder="PI IP" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #00f2ff; border-radius: 4px; padding: 4px 8px; font-size: 11px; width: 140px; font-family: 'Consolas', monospace;">
+                        <button id="bridgeConnectBtn" class="btn-primary" style="padding: 4px 12px; font-size: 10px;">CONNECT BRIDGE</button>
+                    </div>
+                    <div id="bridgeStatus" class="status-indicator">OFFLINE</div>
+                    <div class="piloop-controls" id="bridgeControlGroup" style="display: flex; gap: 5px; opacity: 0.5; pointer-events: none; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px; margin-left: 5px;">
+                        <button id="bridgeStartBtn" class="btn-play" style="padding: 6px 10px; font-size: 9px;"><i data-lucide="play"></i> START</button>
+                        <button id="bridgePauseBtn" class="btn-outline" style="padding: 6px 10px; font-size: 9px;"><i data-lucide="pause"></i> PAUSE</button>
+                        <button id="bridgeStopBtn" class="btn-danger" style="padding: 6px 10px; font-size: 9px;"><i data-lucide="square"></i> CLEAR</button>
+                    </div>
                 </div>
                 <button id="connectBtn" class="btn-primary">
                     <i data-lucide="plug"></i> Connect Arduino
@@ -364,6 +367,15 @@
             </div>
             <div id="sequencerTracks" class="sequencer-tracks" style="flex: 1; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto; overflow-y: hidden; display: flex; gap: 2px; padding: 10px; align-items: flex-end; position: relative;">
                 <!-- Recorded events will be drawn here -->
+            </div>
+        </div>
+        <div class="panel telemetry-panel" style="margin-top: 15px; border-top: 1px solid rgba(0,242,255,0.1);">
+            <div class="panel-header" style="padding: 8px 15px;">
+                <h2 style="font-size: 12px; color: #00f2ff;"><i data-lucide="terminal"></i> Live Bridge Telemetry</h2>
+                <button onclick="document.getElementById('telemetryLog').innerHTML = ''" class="btn-tiny" style="font-size: 8px;">CLEAR LOG</button>
+            </div>
+            <div id="telemetryLog" style="height: 120px; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; font-family: 'Consolas', monospace; font-size: 10px; color: #00ff47; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); line-height: 1.4;">
+                Awaiting connection to Raspi Bridge...
             </div>
         </div>
     </div>
