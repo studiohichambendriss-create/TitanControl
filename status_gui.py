@@ -18,7 +18,7 @@ class TitanStatusApp:
         self.style = ttk.Style()
         self.style.theme_use('clam')
         
-        self.header = tk.Label(root, text='?? TITAN 15: SYSTEM STATUS', font=('Orbitron', 20, 'bold'), bg='#0a0b10', fg='#00f2ff', pady=20)
+        self.header = tk.Label(root, text='🛸 TITAN 15: SYSTEM STATUS', font=('Orbitron', 20, 'bold'), bg='#0a0b10', fg='#00f2ff', pady=20)
         self.header.pack()
 
         self.status_frame = tk.Frame(root, bg='#0a0b10')
@@ -130,14 +130,13 @@ class TitanStatusApp:
     def tail_log(self):
         log_path = '/home/aldo/TitanControl_Raspi/bridge.log'
         if not os.path.exists(log_path):
-            with open(log_path, 'w') as f: f.write('Bridge log started...\\n')
+            with open(log_path, 'w') as f: f.write('Bridge log started...\n')
             
         process = subprocess.Popen(['tail', '-n', '20', '-f', log_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for line in process.stdout:
             self.root.after(0, self.add_log, line.strip())
 
-    def add_log(self, msg):
-        self.log_box.insert(tk.END, msg + '\\n')
+        self.log_box.insert(tk.END, msg + '\n')
         self.log_box.see(tk.END)
         self.header.config(fg='#ffffff')
         self.root.after(100, lambda: self.header.config(fg='#00f2ff'))
