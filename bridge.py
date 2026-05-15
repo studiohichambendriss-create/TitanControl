@@ -163,6 +163,7 @@ def clear_loop():
 @app.route('/play')
 def play_loop():
     global autonomous_paused, is_autonomous
+    resume_motors()
     autonomous_paused = False
     is_autonomous = True
     log('▶️ Piloop Started via HTTP')
@@ -175,6 +176,15 @@ def pause_loop():
     pause_and_snapshot()
     log('⏸️ Piloop Paused via HTTP')
     return '⏸️ Playback Paused'
+
+@app.route('/resume')
+def resume_loop():
+    global autonomous_paused, is_autonomous
+    resume_motors()
+    autonomous_paused = False
+    is_autonomous = True
+    log('▶️ Piloop Resumed via HTTP')
+    return '▶️ Playback Resumed'
 
 @socketio.on('connect')
 def handle_connect():

@@ -73,7 +73,7 @@ class TitanStatusApp:
     def toggle_pause(self):
         current_text = self.pause_btn.cget('text')
         if 'RESUME' in current_text:
-            url = 'http://127.0.0.1:5000/play'
+            url = 'http://127.0.0.1:5000/resume'
             self.pause_btn.config(text='PAUSE CURRENT LOOP', bg='#ff8a00')
         else:
             url = 'http://127.0.0.1:5000/pause'
