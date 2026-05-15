@@ -419,7 +419,7 @@ async function sendCommand(cmd) {
 }
 
 // --- RASPI BRIDGE LOGIC ---
-let socket = null;
+socket = null;
 const bridgeIpInput = document.getElementById('raspiIp');
 const bridgeConnectBtn = document.getElementById('bridgeConnectBtn');
 const bridgeStatus = document.getElementById('bridgeStatus');
