@@ -481,6 +481,22 @@ if (bridgeConnectBtn) {
             }
         });
 
+        let piIsPaused = false;
+        socket.on('sync_time', (data) => {
+            piIsPaused = data.is_paused;
+            const pauseBtn = document.getElementById('bridgePauseBtn');
+            if (pauseBtn) {
+                if (piIsPaused) {
+                    pauseBtn.innerHTML = '<i data-lucide="play"></i> RESUME';
+                    pauseBtn.classList.add('active');
+                } else {
+                    pauseBtn.innerHTML = '<i data-lucide="pause"></i> PAUSE';
+                    pauseBtn.classList.remove('active');
+                }
+                lucide.createIcons();
+            }
+        });
+
         socket.on('sync_data', (data) => {
             if (data && data.sequence && data.sequence.length > 0) {
                 logTelemetry("📥 Received sequence from Pi.");
@@ -502,7 +518,11 @@ if (document.getElementById('bridgeStartBtn')) {
     };
 }
 if (document.getElementById('bridgePauseBtn')) {
-    document.getElementById('bridgePauseBtn').onclick = () => { socket.emit('control_piloop', { action: 'pause' }); };
+    document.getElementById('bridgePauseBtn').onclick = () => {
+        const pauseBtn = document.getElementById('bridgePauseBtn');
+        const isPaused = pauseBtn.classList.contains('active');
+        socket.emit('control_piloop', { action: isPaused ? 'resume' : 'pause' });
+    };
 }
 if (document.getElementById('bridgeStopBtn')) {
     document.getElementById('bridgeStopBtn').onclick = () => { socket.emit('control_piloop', { action: 'stop' }); };
