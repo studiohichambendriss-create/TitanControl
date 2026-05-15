@@ -46,6 +46,7 @@ last_real_time = 0.0
 sequence_file = 'sequence.json'
 autonomous_paused = True
 loop_delay_ms = 0
+current_motor_states = [0] * 15
 
 def log(msg):
     timestamp = time.strftime('%H:%M:%S')
@@ -70,6 +71,20 @@ def stop_motors():
             log(f'❌ Failed to send STOP: {e}')
     else:
         log('🛠️ [VIRTUAL] STOP all motors')
+
+def resume_motors():
+    global ser
+    log('▶️ Restoring motor states before resume...')
+    if ser and ser.is_open:
+        try:
+            for i in range(15):
+                if current_motor_states[i] > 0:
+                    ser.write(f'M{i}:{current_motor_states[i]}\n'.encode())
+                    time.sleep(0.01)
+        except Exception as e:
+            log(f'❌ Failed to send resume states: {e}')
+    else:
+        log('🛠️ [VIRTUAL] Restoring motor states')
 
 def load_sequence():
     global current_sequence, loop_delay_ms
@@ -224,6 +239,7 @@ def handle_piloop_control(data):
         stop_motors()
         log('⏸️ PILOOP PAUSED')
     elif action == 'resume':
+        resume_motors()
         autonomous_paused = False
         log('▶️ PILOOP RESUMED')
 
@@ -231,6 +247,15 @@ def handle_piloop_control(data):
 def handle_command(cmd):
     global ser
     log(f'📡 [MASTER] Received: {cmd}')
+    if cmd.startswith('M'):
+        try:
+            parts = cmd[1:].split(':')
+            m, v = int(parts[0]), int(parts[1])
+            if m < 15:
+                current_motor_states[m] = v
+        except:
+            pass
+    
     if ser and ser.is_open:
         try:
             ser.write((cmd + '\n').encode())
@@ -274,6 +299,7 @@ def playback_loop():
                     evt = current_sequence[playback_index]
                     m, v = evt['m'], evt['v']
                     if m < 15:
+                        current_motor_states[m] = v
                         cmd = f"M{m}:{v}"
                         if ser and ser.is_open:
                             try:

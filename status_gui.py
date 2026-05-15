@@ -50,9 +50,6 @@ class TitanStatusApp:
         self.btn_frame = tk.Frame(root, bg='#0a0b10')
         self.btn_frame.pack(pady=10, fill='x', padx=50)
         
-        self.clear_btn = tk.Button(self.btn_frame, text='CLEAR PI LOOP', font=('Inter', 10, 'bold'), bg='#ff3e3e', fg='white', command=self.clear_loop)
-        self.clear_btn.pack(side='left', expand=True, fill='x', padx=5)
-        
         self.pause_btn = tk.Button(self.btn_frame, text='PAUSE CURRENT LOOP', font=('Inter', 10, 'bold'), bg='#ff8a00', fg='white', command=self.toggle_pause)
         self.pause_btn.pack(side='left', expand=True, fill='x', padx=5)
 
@@ -73,12 +70,6 @@ class TitanStatusApp:
         threading.Thread(target=self.update_loop, daemon=True).start()
         threading.Thread(target=self.tail_log, daemon=True).start()
         
-    def clear_loop(self):
-        try:
-            urllib.request.urlopen('http://127.0.0.1:5000/clear', timeout=2)
-        except:
-            self.add_log('⚠️ Failed to contact bridge for CLEAR')
-            
     def toggle_pause(self):
         current_text = self.pause_btn.cget('text')
         if 'RESUME' in current_text:
