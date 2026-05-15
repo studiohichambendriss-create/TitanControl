@@ -47,6 +47,7 @@ sequence_file = 'sequence.json'
 autonomous_paused = True
 loop_delay_ms = 0
 current_motor_states = [0] * 15
+paused_motor_states = [0] * 15
 
 def log(msg):
     timestamp = time.strftime('%H:%M:%S')
@@ -72,18 +73,27 @@ def stop_motors():
     else:
         log('🛠️ [VIRTUAL] STOP all motors')
 
+def pause_and_snapshot():
+    global paused_motor_states
+    for i in range(15):
+        paused_motor_states[i] = current_motor_states[i]
+    stop_motors()
+
 def resume_motors():
-    global ser
+    global ser, current_motor_states
     log('▶️ Restoring motor states before resume...')
     if ser and ser.is_open:
         try:
             for i in range(15):
-                if current_motor_states[i] > 0:
-                    ser.write(f'M{i}:{current_motor_states[i]}\n'.encode())
-                    time.sleep(0.01)
+                current_motor_states[i] = paused_motor_states[i]
+                if paused_motor_states[i] > 0:
+                    ser.write(f'M{i}:{paused_motor_states[i]}\n'.encode())
+                    time.sleep(0.05) # 50ms delay to prevent Arduino serial buffer overflow
         except Exception as e:
             log(f'❌ Failed to send resume states: {e}')
     else:
+        for i in range(15):
+            current_motor_states[i] = paused_motor_states[i]
         log('🛠️ [VIRTUAL] Restoring motor states')
 
 def load_sequence():
@@ -162,7 +172,7 @@ def play_loop():
 def pause_loop():
     global autonomous_paused
     autonomous_paused = True
-    stop_motors()
+    pause_and_snapshot()
     log('⏸️ Piloop Paused via HTTP')
     return '⏸️ Playback Paused'
 
@@ -236,7 +246,7 @@ def handle_piloop_control(data):
         log('⏹️ PILOOP STOPPED')
     elif action == 'pause':
         autonomous_paused = True
-        stop_motors()
+        pause_and_snapshot()
         log('⏸️ PILOOP PAUSED')
     elif action == 'resume':
         resume_motors()
