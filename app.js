@@ -270,6 +270,12 @@ function loadSettings() {
         document.getElementById('pianoHoverLerpVal').innerText = s.pianoHoverLerpSpeed;
     }
 
+    // Load Bridge IP
+    const savedIp = localStorage.getItem('titan_bridge_ip');
+    if (savedIp && document.getElementById('raspiIp')) {
+        document.getElementById('raspiIp').value = savedIp;
+    }
+
     // Trigger UI updates to hide panels
     document.getElementById('pianoModeToggle').dispatchEvent(new Event('change'));
     document.getElementById('hoverModeToggle').dispatchEvent(new Event('change'));
@@ -441,11 +447,12 @@ if (bridgeConnectBtn) {
             socket.disconnect();
             return;
         }
-        const ip = (bridgeIpInput ? bridgeIpInput.value.trim() : "") || "10.52.24.202";
+        const ip = (bridgeIpInput ? bridgeIpInput.value.trim() : "") || "10.42.0.1";
         logTelemetry(`Connecting to http://${ip}:5000...`);
         socket = io(`http://${ip}:5000`);
         
         socket.on('connect', () => {
+            localStorage.setItem('titan_bridge_ip', ip);
             bridgeStatus.innerText = 'ONLINE';
             bridgeStatus.classList.add('online');
             bridgeConnectBtn.innerText = 'DISCONNECT';
