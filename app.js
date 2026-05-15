@@ -285,6 +285,9 @@ async function sendCommand(cmd) {
         const encoder = new TextEncoder();
         await writer.write(encoder.encode(cmd + '\n'));
     }
+    if (socket && socket.connected) {
+        socket.emit('command', cmd);
+    }
 }
 
 async function setMotor(id, val, skipRecord = false) {
@@ -1097,3 +1100,75 @@ document.getElementById('pianoHoverLerpSpeed').oninput = (e) => {
 
 // Final cleanup: No more alerts on mapping, just visual glow.
 // (Logic already in place via selectedMotorId)
+
+// --- RASPI BRIDGE LOGIC ---
+let socket = null;
+const bridgeIpInput = document.getElementById('raspiIp');
+const bridgeConnectBtn = document.getElementById('bridgeConnectBtn');
+const bridgeStatus = document.getElementById('bridgeStatus');
+const bridgeControlGroup = document.getElementById('bridgeControlGroup');
+const telemetryLog = document.getElementById('telemetryLog');
+
+function logTelemetry(msg) {
+    if (!telemetryLog) return;
+    const div = document.createElement('div');
+    div.innerText = msg;
+    telemetryLog.appendChild(div);
+    telemetryLog.scrollTop = telemetryLog.scrollHeight;
+    if (telemetryLog.childNodes.length > 150) telemetryLog.removeChild(telemetryLog.firstChild);
+}
+
+if (bridgeConnectBtn) {
+    bridgeConnectBtn.onclick = () => {
+        if (socket && socket.connected) {
+            socket.disconnect();
+            return;
+        }
+        const ip = bridgeIpInput.value.trim();
+        if (!ip) return alert("Enter Bridge IP");
+        logTelemetry(`Connecting to http://${ip}:5000...`);
+        socket = io(`http://${ip}:5000`);
+        
+        socket.on('connect', () => {
+            bridgeStatus.innerText = 'ONLINE';
+            bridgeStatus.classList.add('online');
+            bridgeConnectBtn.innerText = 'DISCONNECT';
+            if (bridgeControlGroup) {
+                bridgeControlGroup.style.opacity = '1';
+                bridgeControlGroup.style.pointerEvents = 'auto';
+            }
+            logTelemetry("✅ Connected to Raspi Bridge");
+        });
+        
+        socket.on('disconnect', () => {
+            bridgeStatus.innerText = 'OFFLINE';
+            bridgeStatus.classList.remove('online');
+            bridgeConnectBtn.innerText = 'CONNECT BRIDGE';
+            if (bridgeControlGroup) {
+                bridgeControlGroup.style.opacity = '0.5';
+                bridgeControlGroup.style.pointerEvents = 'none';
+            }
+            logTelemetry("❌ Disconnected from Raspi Bridge");
+        });
+        
+        socket.on('log', (msg) => { logTelemetry(msg); });
+        socket.on('status', (data) => {
+            if (data.serial === 'OFFLINE') logTelemetry("⚠️ Arduino is OFFLINE on Pi.");
+        });
+    };
+}
+
+if (document.getElementById('bridgeStartBtn')) {
+    document.getElementById('bridgeStartBtn').onclick = () => {
+        if (recording.length === 0) return alert("No recording to play on Pi");
+        logTelemetry("⬆️ Syncing sequence to Pi...");
+        socket.emit('upload_sequence', { sequence: recording, delay: 0 });
+        setTimeout(() => { socket.emit('control_piloop', { action: 'start' }); }, 500);
+    };
+}
+if (document.getElementById('bridgePauseBtn')) {
+    document.getElementById('bridgePauseBtn').onclick = () => { socket.emit('control_piloop', { action: 'pause' }); };
+}
+if (document.getElementById('bridgeStopBtn')) {
+    document.getElementById('bridgeStopBtn').onclick = () => { socket.emit('control_piloop', { action: 'stop' }); };
+}

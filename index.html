@@ -12,6 +12,7 @@
     <link rel="icon" href="data:,">
     <script src="https://unpkg.com/lucide@0.400.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/midi-player-js@2.0.16/browser/midiplayer.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         #loader {
             position: fixed;
@@ -48,6 +49,22 @@
         </header>
 
         <div class="dashboard">
+            <div class="bridge-panel panel" style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; padding: 15px; background: rgba(0, 242, 255, 0.05); border: 1px solid rgba(0, 242, 255, 0.2);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="network" style="color: #00f2ff;"></i>
+                    <h2 style="margin: 0; font-size: 14px; letter-spacing: 1px;">RASPI BRIDGE</h2>
+                </div>
+                <input type="text" id="raspiIp" value="10.52.24.202" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #00f2ff; padding: 5px 10px; border-radius: 4px; font-family: 'Consolas', monospace; width: 140px;">
+                <button id="bridgeConnectBtn" class="btn-primary" style="padding: 5px 15px; font-size: 11px;">CONNECT BRIDGE</button>
+                <div id="bridgeStatus" class="status-indicator" style="margin: 0;">OFFLINE</div>
+                
+                <div class="piloop-controls" style="margin-left: auto; display: flex; gap: 10px; align-items: center; opacity: 0.5; pointer-events: none;" id="bridgeControlGroup">
+                    <span style="font-size: 10px; color: #a0a0a0;">PI-LOOP:</span>
+                    <button id="bridgeStartBtn" class="btn-play" style="padding: 5px 12px; font-size: 10px;"><i data-lucide="play"></i> START</button>
+                    <button id="bridgePauseBtn" class="btn-outline" style="padding: 5px 12px; font-size: 10px;"><i data-lucide="pause"></i> PAUSE</button>
+                    <button id="bridgeStopBtn" class="btn-danger" style="padding: 5px 12px; font-size: 10px;"><i data-lucide="square"></i> STOP</button>
+                </div>
+            </div>
             <div class="main-controls" style="display: flex; flex-direction: column;">
                 <div class="panel motors-panel" style="flex: 1;">
                     <div class="panel-header">
@@ -320,6 +337,15 @@
                         <div id="midiInfo" class="midi-info">No MIDI active</div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="panel telemetry-panel" style="margin-top: 20px;">
+            <div class="panel-header">
+                <h2><i data-lucide="terminal"></i> Live Bridge Telemetry</h2>
+                <button onclick="document.getElementById('telemetryLog').innerHTML = ''" class="btn-tiny">CLEAR</button>
+            </div>
+            <div id="telemetryLog" style="height: 150px; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 15px; font-family: 'Consolas', monospace; font-size: 11px; color: #00ff47; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05);">
+                Waiting for bridge connection...
             </div>
         </div>
     </div>
