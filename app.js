@@ -468,17 +468,13 @@ connectBridgeBtn.onclick = () => {
             document.getElementById('timelineScrubber').value = virtualTime;
             document.getElementById('timelineCurrent').innerText = formatTimeShort(virtualTime);
             
-            // Start playback to sync with where Pi was
-            if (!isPlaying && !isRecording) {
-                isPlaying = true;
-                playBtn.innerHTML = '<i data-lucide="pause"></i> PAUSE';
-                lucide.createIcons();
-                lastRealTime = performance.now();
-                playbackIndex = recording.findIndex(evt => evt.t >= virtualTime);
-                if (playbackIndex === -1) playbackIndex = recording.length;
-                applyStateAtTime(virtualTime);
-                runPlayback();
-            }
+            // Sync time
+            virtualTime = data.current_time || 0;
+            document.getElementById('timelineScrubber').value = virtualTime;
+            document.getElementById('timelineCurrent').innerText = formatTimeShort(virtualTime);
+            
+            // Just sync the state, don't start local playback loop
+            applyStateAtTime(virtualTime);
         }
     });
 
