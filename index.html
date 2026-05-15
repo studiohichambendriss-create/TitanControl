@@ -92,7 +92,8 @@
                 <div class="panel recorder-panel">
                     <div class="tabs">
                         <button class="tab-btn active" data-tab="rec-controls">CONTROLS</button>
-                        <button class="tab-btn" data-tab="midi-file">FILE</button>
+                        <button class="tab-btn" data-tab="rec-file">FILE</button>
+                        <button class="tab-btn" data-tab="midi-file">MIDI</button>
                         <button class="tab-btn" data-tab="rec-bridge">TELEMETRY</button>
                     </div>
 
@@ -336,6 +337,36 @@
                             <i data-lucide="file-music"></i> LOAD MIDI FILE
                         </button>
                         <div id="midiInfo" class="midi-info">No MIDI active</div>
+                    </div>
+
+                    <div id="rec-file" class="tab-content">
+                        <div class="setting">
+                            <label>RECORDING NAME</label>
+                            <input type="text" id="recordName" placeholder="motor_sequence_..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 4px 8px; margin-top: 5px;">
+                        </div>
+                        <div class="setting" style="display: flex; justify-content: space-between; align-items: center;">
+                            <label>AUTO-SAVE (JSON)</label>
+                            <label class="switch">
+                                <input type="checkbox" id="autoSaveToggle">
+                                <span class="slider-toggle"></span>
+                            </label>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 8px; color: #a0a0a0; display: block; margin-bottom: 5px;">EXPORT FORMAT</label>
+                                <select id="exportFormat" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 4px;">
+                                    <option value="json">JSON</option>
+                                    <option value="csv">CSV</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; display: flex; align-items: flex-end;">
+                                <button id="exportBtn" class="btn-primary w-100"><i data-lucide="download"></i> EXPORT</button>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <input type="file" id="importFile" accept=".json,.csv" hidden>
+                            <button class="btn-outline w-100" onclick="document.getElementById('importFile').click()"><i data-lucide="upload"></i> IMPORT SEQUENCE</button>
+                        </div>
                     </div>
 
                     <div id="rec-bridge" class="tab-content" style="padding-top: 15px;">
