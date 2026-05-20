@@ -506,6 +506,14 @@ if (bridgeConnectBtn) {
 
         socket.on('sync_data', (data) => {
             if (data && data.sequence && data.sequence.length > 0) {
+                if (isRecording) {
+                    logTelemetry("ℹ️ Sequence received from Pi, but ignored because you are currently recording.");
+                    return;
+                }
+                if (recording.length > 0 && !isSaved) {
+                    logTelemetry("ℹ️ Sequence received from Pi, but ignored to protect your unsaved local recording.");
+                    return;
+                }
                 logTelemetry("📥 Received sequence from Pi.");
                 recording = data.sequence;
                 if (playBtn) playBtn.disabled = false;
@@ -522,6 +530,7 @@ if (document.getElementById('bridgeStartBtn')) {
         const delay = parseFloat(document.getElementById('piLoopDelay')?.value) || 0;
         logTelemetry(`⬆️ Syncing sequence to Pi (Delay: ${delay}s)...`);
         socket.emit('upload_sequence', { sequence: recording, delay: delay });
+        isSaved = true;
         setTimeout(() => { socket.emit('control_piloop', { action: 'start' }); }, 500);
     };
 }
