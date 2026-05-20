@@ -34,6 +34,7 @@ const pauseBtn = document.getElementById('pauseBtn');
 const recordTimer = document.getElementById('recordTimer');
 
 let isSaved = true;
+let piStoredSequence = [];
 
 const clearSeqBtn = document.getElementById('clearSeqBtn');
 if (clearSeqBtn) {
@@ -506,21 +507,35 @@ if (bridgeConnectBtn) {
 
         socket.on('sync_data', (data) => {
             if (data && data.sequence && data.sequence.length > 0) {
-                if (isRecording) {
-                    logTelemetry("ℹ️ Sequence received from Pi, but ignored because you are currently recording.");
-                    return;
-                }
-                if (recording.length > 0 && !isSaved) {
-                    logTelemetry("ℹ️ Sequence received from Pi, but ignored to protect your unsaved local recording.");
-                    return;
-                }
-                logTelemetry("📥 Received sequence from Pi.");
-                recording = data.sequence;
-                if (playBtn) playBtn.disabled = false;
-                updateTimelineTotal();
-                renderSequencer();
+                piStoredSequence = data.sequence;
+                logTelemetry("ℹ️ Received sequence from Pi. (Ready to pull).");
             }
         });
+    };
+}
+
+const pullFromPiBtn = document.getElementById('pullFromPiBtn');
+if (pullFromPiBtn) {
+    pullFromPiBtn.onclick = () => {
+        if (!socket || !socket.connected) {
+            alert("Please connect to the Pi Bridge first!");
+            return;
+        }
+        if (!piStoredSequence || piStoredSequence.length === 0) {
+            alert("No sequence has been received from the Pi yet. Wait a second or reconnect.");
+            return;
+        }
+        if (!isSaved && recording.length > 0) {
+            if (!confirm("Your local timeline has unsaved changes. Overwrite with Pi recording?")) {
+                return;
+            }
+        }
+        recording = [...piStoredSequence];
+        isSaved = true;
+        if (playBtn) playBtn.disabled = false;
+        updateTimelineTotal();
+        renderSequencer();
+        logTelemetry("📥 Pulled sequence from Pi.");
     };
 }
 
